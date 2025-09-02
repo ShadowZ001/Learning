@@ -1,0 +1,7 @@
+[build]
+  publish = "."
+  
+[[redirects]]
+  from = "/auth/discord/callback"
+  to = "/auth-callback.html"
+  status = 200

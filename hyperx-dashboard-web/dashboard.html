@@ -557,29 +557,18 @@
     </div>
 
     <script>
-        // Check authentication and load user data from API
-        async function loadUserData() {
-            try {
-                const response = await fetch('/api/user');
-                if (!response.ok) {
-                    window.location.href = 'index.html';
-                    return null;
-                }
-                return await response.json();
-            } catch (error) {
+        // Check if user is authenticated (static version)
+        function checkAuth() {
+            const user = JSON.parse(localStorage.getItem('discordUser') || 'null');
+            if (!user) {
                 window.location.href = 'index.html';
                 return null;
             }
+            return user;
         }
         
-        let user = null;
-        loadUserData().then(userData => {
-            if (!userData) return;
-            user = userData;
-            initializePage();
-        });
-        
-        function initializePage() {
+        const user = checkAuth();
+        if (!user) return;
 
         // Check for first-time signup bonus
         function checkSignupBonus() {
@@ -616,42 +605,39 @@
             sessionStorage.removeItem('freshLogin');
         }
 
-            // Load Discord user info
-            document.getElementById('userName').textContent = user.username;
-            document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.username} 👋`;
-            const avatarUrl = user.avatar 
-                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-                : `https://cdn.discordapp.com/embed/avatars/${user.discriminator % 5}.png`;
-            document.getElementById('userAvatar').src = avatarUrl;
-        }
+        // Load Discord user info
+        document.getElementById('userName').textContent = user.username;
+        document.getElementById('welcomeMessage').textContent = `Welcome back, ${user.username} 👋`;
+        const avatarUrl = user.avatar 
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/${user.discriminator % 5}.png`;
+        document.getElementById('userAvatar').src = avatarUrl;
 
         // Claim daily reward function
-        async function claimDailyReward() {
-            try {
-                const response = await fetch('/api/transaction', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'received',
-                        label: 'Daily reward',
-                        amount: 25
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('✅ Daily reward claimed! +25 coins added to your wallet.');
-                    
-                    // Disable button
-                    const btn = event.target;
-                    btn.disabled = true;
-                    btn.textContent = 'Claimed ✓';
-                    btn.style.opacity = '0.5';
-                } else {
-                    alert('❌ Failed to claim reward. Please try again.');
-                }
-            } catch (error) {
-                alert('❌ Network error. Please try again.');
-            }
+        function claimDailyReward() {
+            const transactions = JSON.parse(localStorage.getItem('walletTransactions') || '[]');
+            const currentBalance = parseInt(localStorage.getItem('walletBalance') || '0');
+            const newBalance = currentBalance + 25;
+            
+            const transaction = {
+                type: 'received',
+                label: 'Daily reward',
+                amount: 25,
+                time: 'now',
+                balance: newBalance,
+                timestamp: Date.now()
+            };
+            
+            transactions.unshift(transaction);
+            localStorage.setItem('walletTransactions', JSON.stringify(transactions));
+            localStorage.setItem('walletBalance', newBalance.toString());
+            
+            alert('✅ Daily reward claimed! +25 coins added to your wallet.');
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Claimed ✓';
+            btn.style.opacity = '0.5';
         }
 
         // Placeholder for Pterodactyl API integration
@@ -699,7 +685,9 @@
 
         // Logout function
         function logout() {
-            window.location.href = '/logout';
+            localStorage.removeItem('discordUser');
+            sessionStorage.clear();
+            window.location.href = 'index.html';
         }
 
         // Load server data on page load
