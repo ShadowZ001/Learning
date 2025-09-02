@@ -20,7 +20,6 @@ DISCORD_CLIENT_SECRET=bBBqobQww0M_FdqVz2J_Y3ob1RUCQkTj
 DISCORD_REDIRECT_URI=https://your-dashboard-url.com/auth/discord/callback
 SESSION_SECRET=your_session_secret
 MONGODB_URI=mongodb+srv://subhasish824988_db_user:blazenode@cluster0.ngqj9vt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-PORT=4000
 ```
 
 ### 3. Start Dashboard
