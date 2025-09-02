@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Server - HyperX Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            color: #e5e5e5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-name {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 3rem;
+            gap: 1rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .step.active {
+            color: #ff6b35;
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .step.active .step-number {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+        }
+
+        .form-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            color: #e5e5e5;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            color: #e5e5e5;
+            font-size: 0.9rem;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e5e5e5;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .validation-message {
+            color: #ff6b6b;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .step-indicator {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L13.09 8.26L22 9L13.09 15.74L12 22L10.91 15.74L2 9L10.91 8.26L12 2Z"/>
+                </svg>
+            </div>
+            HyperX
+        </div>
+        <div class="user-info">
+            <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+            <span id="userName" class="user-name"></span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="page-title">Create New Server</h1>
+
+        <div class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <span>Basics</span>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <span>Resources</span>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <span>Subdomain</span>
+            </div>
+        </div>
+
+        <form id="createServerForm">
+            <!-- Step 1: Basics -->
+            <div class="step-content active" data-step="1">
+                <div class="form-card">
+                    <div class="form-group">
+                        <label class="form-label" for="serverName">Server Name</label>
+                        <input type="text" id="serverName" name="serverName" class="form-input" placeholder="Enter server name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="serverType">Server Type</label>
+                        <select id="serverType" name="serverType" class="form-select" required>
+                            <option value="">Select server type...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="location">Location</label>
+                        <select id="location" name="location" class="form-select" required>
+                            <option value="">Select location...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="servers.html" class="btn btn-secondary">Cancel</a>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Resources -->
+            <div class="step-content" data-step="2">
+                <div class="form-card">
+                    <div class="resource-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="ram">RAM (MB)</label>
+                            <input type="number" id="ram" name="ram" class="form-input" value="2048" min="512" required>
+                            <div class="validation-message" id="ramValidation"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="disk">Disk (MB)</label>
+                            <input type="number" id="disk" name="disk" class="form-input" value="5120" min="1024" required>
+                            <div class="validation-message" id="diskValidation"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="cpu">CPU (%)</label>
+                            <input type="number" id="cpu" name="cpu" class="form-input" value="100" min="50" max="500" required>
+                            <div class="validation-message" id="cpuValidation"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Subdomain -->
+            <div class="step-content" data-step="3">
+                <div class="form-card">
+                    <div class="form-group">
+                        <label class="form-label" for="subdomain">Subdomain (Optional)</label>
+                        <input type="text" id="subdomain" name="subdomain" class="form-input" placeholder="Enter subdomain">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="submit" class="btn btn-primary">Create Server</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 3;
+
+        // Mock user data
+        const mockUser = {
+            username: 'TestUser',
+            id: '123456789',
+            avatar: null,
+            discriminator: 1234
+        };
+
+        // Load mock user info
+        document.getElementById('userName').textContent = mockUser.username;
+        const avatarUrl = mockUser.avatar 
+            ? `https://cdn.discordapp.com/avatars/${mockUser.id}/${mockUser.avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/${mockUser.discriminator % 5}.png`;
+        document.getElementById('userAvatar').src = avatarUrl;
+
+        // Load server types and locations from Pterodactyl API
+        function loadServerTypes() {
+            // TODO: Replace with actual API call to get eggs
+            const mockTypes = [
+                { id: 1, name: 'Minecraft Java' },
+                { id: 2, name: 'Minecraft Bedrock' },
+                { id: 3, name: 'CS2' },
+                { id: 4, name: 'Rust' }
+            ];
+
+            const select = document.getElementById('serverType');
+            mockTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = type.name;
+                select.appendChild(option);
+            });
+        }
+
+        function loadLocations() {
+            // TODO: Replace with actual API call to get nodes
+            const mockLocations = [
+                { id: 1, name: 'Singapore' },
+                { id: 2, name: 'Tokyo' },
+                { id: 3, name: 'Mumbai' }
+            ];
+
+            const select = document.getElementById('location');
+            mockLocations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.id;
+                option.textContent = location.name;
+                select.appendChild(option);
+            });
+        }
+
+        function nextStep() {
+            if (validateCurrentStep()) {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    updateStepDisplay();
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepDisplay();
+            }
+        }
+
+        function updateStepDisplay() {
+            // Update step indicator
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.toggle('active', index + 1 === currentStep);
+            });
+
+            // Update step content
+            document.querySelectorAll('.step-content').forEach((content, index) => {
+                content.classList.toggle('active', index + 1 === currentStep);
+            });
+        }
+
+        function validateCurrentStep() {
+            if (currentStep === 1) {
+                const serverName = document.getElementById('serverName').value;
+                const serverType = document.getElementById('serverType').value;
+                const location = document.getElementById('location').value;
+
+                if (!serverName || !serverType || !location) {
+                    alert('Please fill in all required fields');
+                    return false;
+                }
+            } else if (currentStep === 2) {
+                const ram = parseInt(document.getElementById('ram').value);
+                const disk = parseInt(document.getElementById('disk').value);
+                const cpu = parseInt(document.getElementById('cpu').value);
+
+                // TODO: Get minimum requirements from selected egg
+                const minRam = 512;
+                const minDisk = 1024;
+                const minCpu = 50;
+
+                let valid = true;
+
+                if (ram < minRam) {
+                    document.getElementById('ramValidation').textContent = `Minimum RAM required: ${minRam}MB`;
+                    valid = false;
+                } else {
+                    document.getElementById('ramValidation').textContent = '';
+                }
+
+                if (disk < minDisk) {
+                    document.getElementById('diskValidation').textContent = `Minimum disk required: ${minDisk}MB`;
+                    valid = false;
+                } else {
+                    document.getElementById('diskValidation').textContent = '';
+                }
+
+                if (cpu < minCpu) {
+                    document.getElementById('cpuValidation').textContent = `Minimum CPU required: ${minCpu}%`;
+                    valid = false;
+                } else {
+                    document.getElementById('cpuValidation').textContent = '';
+                }
+
+                return valid;
+            }
+
+            return true;
+        }
+
+        // Handle form submission
+        document.getElementById('createServerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // TODO: Submit to Pterodactyl API
+            const formData = new FormData(this);
+            const serverData = Object.fromEntries(formData);
+            
+            console.log('Creating server with data:', serverData);
+            alert('Server creation functionality will be implemented with Pterodactyl API');
+        });
+
+        // Load initial data
+        loadServerTypes();
+        loadLocations();
+    </script>
+</body>
+</html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servers - HyperX Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            color: #e5e5e5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            margin-left: 2rem;
+        }
+
+        .nav-link {
+            color: #a0a0a0;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #fff;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .mobile-nav {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 1000;
+        }
+
+        .mobile-nav.active {
+            display: flex;
+        }
+
+        .mobile-nav .nav-link {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-name {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .new-server-btn {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .new-server-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        .servers-table {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            color: #a0a0a0;
+            font-weight: 500;
+            font-size: 0.85rem;
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .server-name {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.online {
+            background: #4ade80;
+        }
+
+        .status-text {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        .resource-usage {
+            color: #e5e5e5;
+            font-size: 0.9rem;
+        }
+
+        .no-servers {
+            text-align: center;
+            color: #a0a0a0;
+            padding: 3rem;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                position: relative;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .user-name {
+                display: none;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+
+            .servers-table {
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="display: flex; align-items: center;">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.5 3.5L22 12L17.5 20.5H6.5L2 12L6.5 3.5H17.5Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        <path d="M12 8L15 12L12 16L9 12Z"/>
+                    </svg>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
+                <a href="servers.html" class="nav-link active">Servers</a>
+                <a href="wallet.html" class="nav-link">Wallet</a>
+                <a href="store.html" class="nav-link">Store</a>
+            </nav>
+        </div>
+        <div class="user-info">
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                </svg>
+            </button>
+            <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+            <span id="userName" class="user-name"></span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        <nav class="mobile-nav" id="mobileNav">
+            <a href="dashboard.html" class="nav-link" onclick="closeMobileMenu()">Dashboard</a>
+            <a href="servers.html" class="nav-link active" onclick="closeMobileMenu()">Servers</a>
+            <a href="wallet.html" class="nav-link" onclick="closeMobileMenu()">Wallet</a>
+            <a href="store.html" class="nav-link" onclick="closeMobileMenu()">Store</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Servers</h1>
+            <a href="create-server.html" class="new-server-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Server
+            </a>
+        </div>
+
+        <div class="servers-table">
+            <table id="serversTable">
+                <thead>
+                    <tr>
+                        <th>Server Name</th>
+                        <th>Status</th>
+                        <th>Memory</th>
+                        <th>CPU</th>
+                        <th>Disk</th>
+                    </tr>
+                </thead>
+                <tbody id="serversTableBody">
+                    <tr>
+                        <td colspan="5">
+                            <div class="no-servers">No servers found</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Mock user data (temporary until Discord auth is enabled)
+        const mockUser = {
+            username: 'TestUser',
+            id: '123456789',
+            avatar: null,
+            discriminator: 1234
+        };
+
+        // Load mock user info
+        document.getElementById('userName').textContent = mockUser.username;
+        const avatarUrl = mockUser.avatar 
+            ? `https://cdn.discordapp.com/avatars/${mockUser.id}/${mockUser.avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/${mockUser.discriminator % 5}.png`;
+        document.getElementById('userAvatar').src = avatarUrl;
+
+        // Placeholder for Pterodactyl API integration
+        // TODO: Replace with actual API calls using API key
+        function loadServers() {
+            // Placeholder for server data from Pterodactyl API
+            const servers = [];
+            
+            const tableBody = document.getElementById('serversTableBody');
+            if (servers.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5">
+                            <div class="no-servers">No servers found</div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tableBody.innerHTML = servers.map(server => `
+                    <tr>
+                        <td class="server-name">${server.name}</td>
+                        <td>
+                            <div class="server-status">
+                                <div class="status-dot ${server.status}"></div>
+                                <span class="status-text">${server.status === 'online' ? 'Online' : 'Offline'}</span>
+                            </div>
+                        </td>
+                        <td class="resource-usage">${server.memory_used}MB / ${server.memory_limit}MB</td>
+                        <td class="resource-usage">${server.cpu_used}% / ${server.cpu_limit}%</td>
+                        <td class="resource-usage">${server.disk_used}MB / ${server.disk_limit}MB</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            mobileNav.classList.toggle('active');
+        }
+
+        // Close mobile menu
+        function closeMobileMenu() {
+            const mobileNav = document.getElementById('mobileNav');
+            mobileNav.classList.remove('active');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(e) {
+            const mobileNav = document.getElementById('mobileNav');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            if (!mobileNav.contains(e.target) && !menuBtn.contains(e.target)) {
+                mobileNav.classList.remove('active');
+            }
+        });
+
+        // Logout function
+        function logout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        // Load servers on page load
+        loadServers();
+    </script>
+</body>
+</html>
