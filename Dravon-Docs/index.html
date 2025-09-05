@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Dravon Bot Documentation - Advanced Discord Server Management</title>
+    <meta name="description" content="Comprehensive Discord bot with moderation, security, music, premium features, and more. Get started with Dravon Bot today.">
+    <meta name="keywords" content="Discord bot, moderation, music bot, AntiNuke, premium features">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot Logo">
+                <span>Dravon Docs</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#getting-started" class="nav-link">Getting Started</a>
+                <a href="#commands" class="nav-link">Commands</a>
+                <a href="#premium" class="nav-link">Premium</a>
+                <a href="https://discord.gg/UKR78VcEtg" class="nav-link" target="_blank">
+                    <i class="fab fa-discord"></i>
+                    <span class="nav-text">Support</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <div class="hamburger" id="hamburger">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-star"></i>
+                    <span>Advanced Discord Management</span>
+                </div>
+                <h1>Dravon Bot Documentation</h1>
+                <p>Your comprehensive Discord server management solution featuring advanced moderation, security systems, music streaming, and premium features designed for modern Discord communities.</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">50+</span>
+                        <span class="stat-label">Commands</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Uptime</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">1000+</span>
+                        <span class="stat-label">Servers</span>
+                    </div>
+                </div>
+                <div class="hero-buttons">
+                    <a href="#getting-started" class="btn btn-primary">
+                        <i class="fas fa-rocket"></i>
+                        Get Started
+                    </a>
+                    <a href="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot" class="btn btn-secondary" target="_blank">
+                        <i class="fab fa-discord"></i>
+                        Add to Server
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="hero-image-wrapper">
+                    <img src="https://cdn.discordapp.com/attachments/1369352923896741924/1413146132405817487/f41e57df-936d-428a-8aa8-a0b4ca2a1e64.jpg" alt="Dravon Bot Interface" loading="lazy">
+                    <div class="hero-image-overlay"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Getting Started -->
+    <section id="getting-started" class="section">
+        <div class="container">
+            <h2>Getting Started</h2>
+            <div class="getting-started-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Invite Dravon</h3>
+                    <p>Add Dravon to your Discord server with the required permissions</p>
+                    <a href="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot" class="btn btn-outline" target="_blank">Invite Bot</a>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Setup Commands</h3>
+                    <p>Configure your server with setup commands for tickets, welcome messages, and more</p>
+                    <a href="#commands" class="btn btn-outline">View Commands</a>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Go Premium</h3>
+                    <p>Unlock exclusive features like no-prefix commands and Spotify music</p>
+                    <a href="#premium" class="btn btn-outline">Learn More</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands Section -->
+    <section id="commands" class="section bg-dark">
+        <div class="container">
+            <h2>Command Categories</h2>
+            <div class="commands-grid">
+                <!-- Moderation -->
+                <div class="command-category" data-category="moderation">
+                    <div class="category-header">
+                        <i class="fas fa-shield-alt"></i>
+                        <h3>Moderation</h3>
+                        <div class="category-menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <div class="dropdown-menu">
+                                <a href="pages/moderation.html">Setup Guide</a>
+                                <a href="pages/moderation.html#commands">Commands List</a>
+                                <a href="pages/moderation.html#examples">Examples</a>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Powerful moderation tools to manage your server effectively</p>
+                    <div class="category-features">
+                        <span class="feature-tag">Ban/Kick</span>
+                        <span class="feature-tag">Mute/Warn</span>
+                        <span class="feature-tag">Purge</span>
+                    </div>
+                </div>
+
+                <!-- Security -->
+                <div class="command-category" data-category="security">
+                    <div class="category-header">
+                        <i class="fas fa-lock"></i>
+                        <h3>Security (AntiNuke)</h3>
+                        <div class="category-menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <div class="dropdown-menu">
+                                <a href="pages/security.html">Setup Guide</a>
+                                <a href="pages/security.html#commands">Commands List</a>
+                                <a href="pages/security.html#examples">Examples</a>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Advanced AntiNuke v6.0 protection system</p>
+                    <div class="category-features">
+                        <span class="feature-tag">Whitelist</span>
+                        <span class="feature-tag">Auto-Ban</span>
+                        <span class="feature-tag">Logs</span>
+                    </div>
+                </div>
+
+                <!-- Tickets -->
+                <div class="command-category" data-category="tickets">
+                    <div class="category-header">
+                        <i class="fas fa-ticket-alt"></i>
+                        <h3>Ticket System</h3>
+                        <div class="category-menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <div class="dropdown-menu">
+                                <a href="pages/tickets.html">Setup Guide</a>
+                                <a href="pages/tickets.html#commands">Commands List</a>
+                                <a href="pages/tickets.html#examples">Examples</a>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Complete ticket management with categories</p>
+                    <div class="category-features">
+                        <span class="feature-tag">Categories</span>
+                        <span class="feature-tag">Auto-Close</span>
+                        <span class="feature-tag">Transcripts</span>
+                    </div>
+                </div>
+
+                <!-- Music -->
+                <div class="command-category" data-category="music">
+                    <div class="category-header">
+                        <i class="fas fa-music"></i>
+                        <h3>Music Player</h3>
+                        <div class="category-menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <div class="dropdown-menu">
+                                <a href="pages/music.html">Setup Guide</a>
+                                <a href="pages/music.html#commands">Commands List</a>
+                                <a href="pages/music.html#examples">Examples</a>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Multi-platform music with interactive controls</p>
+                    <div class="category-features">
+                        <span class="feature-tag">YouTube</span>
+                        <span class="feature-tag">Spotify</span>
+                        <span class="feature-tag">24/7</span>
+                    </div>
+                </div>
+
+                <!-- Premium -->
+                <div class="command-category" data-category="premium">
+                    <div class="category-header">
+                        <i class="fas fa-crown"></i>
+                        <h3>Premium Features</h3>
+                        <div class="category-menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <div class="dropdown-menu">
+                                <a href="pages/premium.html">Setup Guide</a>
+                                <a href="pages/premium.html#commands">Commands List</a>
+                                <a href="pages/premium.html#examples">Examples</a>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Unlock exclusive features like no-prefix commands and Spotify music</p>
+                    <div class="category-features">
+                        <span class="feature-tag premium">No Prefix</span>
+                        <span class="feature-tag premium">Spotify</span>
+                        <span class="feature-tag premium">Priority</span>
+                    </div>
+                </div>
+
+                <!-- Levels -->
+                <div class="command-category" data-category="levels">
+                    <div class="category-header">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Level System</h3>
+                        <div class="category-menu">
+                            <i class="fas fa-ellipsis-v"></i>
+                            <div class="dropdown-menu">
+                                <a href="pages/levels.html">Setup Guide</a>
+                                <a href="pages/levels.html#commands">Commands List</a>
+                                <a href="pages/levels.html#examples">Examples</a>
+                            </div>
+                        </div>
+                    </div>
+                    <p>Engaging XP and leveling system with rewards</p>
+                    <div class="category-features">
+                        <span class="feature-tag">XP System</span>
+                        <span class="feature-tag">Leaderboard</span>
+                        <span class="feature-tag">Rewards</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Premium Section -->
+    <section id="premium" class="section premium-section">
+        <div class="container">
+            <div class="premium-content">
+                <div class="premium-info">
+                    <div class="premium-badge">
+                        <i class="fas fa-crown"></i>
+                        <span>Premium Features</span>
+                    </div>
+                    <h2>Unlock the Full Potential</h2>
+                    <p>Experience Dravon Bot with exclusive premium features designed for power users and large communities.</p>
+                    <div class="premium-features">
+                        <div class="premium-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>No-prefix commands</span>
+                        </div>
+                        <div class="premium-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Spotify music streaming</span>
+                        </div>
+                        <div class="premium-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Priority support</span>
+                        </div>
+                        <div class="premium-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Advanced customization</span>
+                        </div>
+                        <div class="premium-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Exclusive features</span>
+                        </div>
+                        <div class="premium-feature">
+                            <i class="fas fa-check-circle"></i>
+                            <span>24/7 music streaming</span>
+                        </div>
+                    </div>
+                    <a href="https://discord.gg/UKR78VcEtg" class="btn btn-premium" target="_blank">
+                        <i class="fas fa-crown"></i>
+                        Get Premium Access
+                    </a>
+                </div>
+                <div class="premium-image">
+                    <div class="premium-showcase">
+                        <div class="showcase-item">
+                            <i class="fas fa-music"></i>
+                            <h4>Spotify Integration</h4>
+                            <p>Stream directly from Spotify</p>
+                        </div>
+                        <div class="showcase-item">
+                            <i class="fas fa-bolt"></i>
+                            <h4>No-Prefix Commands</h4>
+                            <p>Use commands without prefix</p>
+                        </div>
+                        <div class="showcase-item">
+                            <i class="fas fa-headset"></i>
+                            <h4>Priority Support</h4>
+                            <p>Get help faster</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                        <h3>Dravon Bot</h3>
+                    </div>
+                    <p>Advanced Discord server management with comprehensive features for modern communities.</p>
+                    <div class="social-links">
+                        <a href="https://discord.gg/UKR78VcEtg" target="_blank" aria-label="Discord">
+                            <i class="fab fa-discord"></i>
+                        </a>
+                        <a href="#" target="_blank" aria-label="GitHub">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="#" target="_blank" aria-label="Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#getting-started">Getting Started</a></li>
+                        <li><a href="#commands">Commands</a></li>
+                        <li><a href="#premium">Premium</a></li>
+                        <li><a href="https://discord.gg/UKR78VcEtg" target="_blank">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Features</h4>
+                    <ul>
+                        <li><a href="pages/moderation.html">Moderation</a></li>
+                        <li><a href="pages/security.html">Security</a></li>
+                        <li><a href="pages/music.html">Music Player</a></li>
+                        <li><a href="pages/tickets.html">Ticket System</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="pages/levels.html">Level System</a></li>
+                        <li><a href="#">API Documentation</a></li>
+                        <li><a href="#">Status Page</a></li>
+                        <li><a href="#">Changelog</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Dravon Bot. All rights reserved. | Made with ❤️ for Discord communities</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" id="scroll-top" onclick="scrollToTop()" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

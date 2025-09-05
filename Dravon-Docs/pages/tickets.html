@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket System - Dravon Bot Documentation</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/pages.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                <span>Dravon Docs</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="../index.html" class="nav-link">Home</a>
+                <a href="../index.html#getting-started" class="nav-link">Getting Started</a>
+                <a href="../index.html#commands" class="nav-link">Commands</a>
+                <a href="https://discord.gg/UKR78VcEtg" class="nav-link" target="_blank">
+                    <i class="fab fa-discord"></i>
+                    <span>Support</span>
+                </a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <div class="header-content">
+                <i class="fas fa-ticket-alt"></i>
+                <h1>Ticket System</h1>
+                <p>Professional support ticket management with categories, transcripts, and automation</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Setup Guide -->
+    <section class="section">
+        <div class="container">
+            <h2>Setup Guide</h2>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Create Ticket Panel</h3>
+                        <p>Set up a ticket panel with buttons for users to create tickets.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>ticket panel #channel
+# Creates an interactive ticket panel
+# Users click buttons to create tickets
+# Supports multiple categories</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Configure Categories</h3>
+                        <p>Set up different ticket categories for organized support.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>ticket category add "General Support" 🎫
+>ticket category add "Bug Reports" 🐛
+>ticket category add "Suggestions" 💡
+# Each category can have custom settings</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Set Support Roles</h3>
+                        <p>Configure which roles can view and manage tickets.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>ticket role add @Support
+>ticket role add @Moderator
+# These roles can view all tickets
+# Configure per-category permissions</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands List -->
+    <section id="commands" class="section bg-dark">
+        <div class="container">
+            <h2>Commands List</h2>
+            <div class="commands-grid">
+                <div class="command-card">
+                    <h3><i class="fas fa-cog"></i> Setup Commands</h3>
+                    <div class="command-item">
+                        <code>>ticket panel &lt;channel&gt;</code>
+                        <p>Create ticket panel in specified channel</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket category add &lt;name&gt; &lt;emoji&gt;</code>
+                        <p>Add new ticket category</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket role add &lt;role&gt;</code>
+                        <p>Add support role for ticket access</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket logs &lt;channel&gt;</code>
+                        <p>Set channel for ticket logs</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-ticket-alt"></i> Ticket Management</h3>
+                    <div class="command-item">
+                        <code>>ticket close [reason]</code>
+                        <p>Close the current ticket</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket reopen</code>
+                        <p>Reopen a closed ticket</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket claim</code>
+                        <p>Claim ticket for personal handling</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket unclaim</code>
+                        <p>Remove claim from ticket</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-users"></i> User Management</h3>
+                    <div class="command-item">
+                        <code>>ticket add &lt;user&gt;</code>
+                        <p>Add user to current ticket</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket remove &lt;user&gt;</code>
+                        <p>Remove user from ticket</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket transfer &lt;user&gt;</code>
+                        <p>Transfer ticket ownership</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-file-alt"></i> Transcripts</h3>
+                    <div class="command-item">
+                        <code>>ticket transcript</code>
+                        <p>Generate ticket transcript</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket save</code>
+                        <p>Save ticket messages to file</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket export</code>
+                        <p>Export ticket data as JSON</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-list"></i> Information</h3>
+                    <div class="command-item">
+                        <code>>ticket info</code>
+                        <p>View current ticket information</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket list</code>
+                        <p>List all open tickets</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket stats</code>
+                        <p>View ticket system statistics</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-tools"></i> Advanced Settings</h3>
+                    <div class="command-item">
+                        <code>>ticket autoclose &lt;time&gt;</code>
+                        <p>Set auto-close timer for inactive tickets</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket limit &lt;number&gt;</code>
+                        <p>Set max tickets per user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>ticket naming &lt;format&gt;</code>
+                        <p>Set ticket channel naming format</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="commands-grid">
+                <div class="feature-card">
+                    <h3><i class="fas fa-mouse-pointer"></i> Interactive Panels</h3>
+                    <p>User-friendly ticket creation with button-based interface.</p>
+                    <ul class="feature-list">
+                        <li>Custom embed design</li>
+                        <li>Category selection buttons</li>
+                        <li>Automatic channel creation</li>
+                        <li>Permission management</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-tags"></i> Category System</h3>
+                    <p>Organize tickets by type with custom categories.</p>
+                    <ul class="feature-list">
+                        <li>Unlimited categories</li>
+                        <li>Custom emojis and names</li>
+                        <li>Category-specific settings</li>
+                        <li>Role-based access control</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-clock"></i> Auto-Management</h3>
+                    <p>Automated ticket lifecycle management.</p>
+                    <ul class="feature-list">
+                        <li>Auto-close inactive tickets</li>
+                        <li>Inactivity warnings</li>
+                        <li>Scheduled cleanup</li>
+                        <li>Smart notifications</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-file-download"></i> Transcript System</h3>
+                    <p>Complete conversation history and export options.</p>
+                    <ul class="feature-list">
+                        <li>HTML transcripts</li>
+                        <li>Message attachments</li>
+                        <li>Searchable archives</li>
+                        <li>Multiple export formats</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-user-tag"></i> Claiming System</h3>
+                    <p>Support staff can claim tickets for personal handling.</p>
+                    <ul class="feature-list">
+                        <li>Ticket assignment</li>
+                        <li>Staff accountability</li>
+                        <li>Workload distribution</li>
+                        <li>Performance tracking</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-chart-bar"></i> Analytics</h3>
+                    <p>Detailed statistics and performance metrics.</p>
+                    <ul class="feature-list">
+                        <li>Response time tracking</li>
+                        <li>Resolution statistics</li>
+                        <li>Staff performance</li>
+                        <li>Category analytics</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples -->
+    <section id="examples" class="section bg-dark">
+        <div class="container">
+            <h2>Setup Examples</h2>
+            <div class="examples-grid">
+                <div class="example-card">
+                    <h3>Basic Setup</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Create ticket panel
+>ticket panel #support
+
+# Add support roles
+>ticket role add @Support Team
+>ticket role add @Moderators
+
+# Set logging channel
+>ticket logs #ticket-logs</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Category Configuration</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Add different categories
+>ticket category add "General Support" 🎫
+>ticket category add "Bug Reports" 🐛
+>ticket category add "Feature Requests" 💡
+>ticket category add "Partnership" 🤝</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Advanced Settings</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Set auto-close after 24 hours of inactivity
+>ticket autoclose 24h
+
+# Limit users to 2 open tickets
+>ticket limit 2
+
+# Custom naming format
+>ticket naming ticket-{category}-{number}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow -->
+    <section class="section">
+        <div class="container">
+            <h2>Ticket Workflow</h2>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>User Creates Ticket</h3>
+                        <p>User clicks category button on ticket panel to create a new support ticket.</p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Channel Creation</h3>
+                        <p>Bot creates private channel with user and support roles, sends welcome message.</p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Support Interaction</h3>
+                        <p>Support staff can claim ticket, add/remove users, and provide assistance.</p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Resolution & Closure</h3>
+                        <p>Once resolved, ticket is closed with transcript saved and channel archived.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pro Tips -->
+    <section class="section bg-dark">
+        <div class="container">
+            <h2>Pro Tips</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-tags"></i>
+                    <h3>Organize Categories</h3>
+                    <p>Create specific categories for different types of issues to streamline support and improve response times.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-users-cog"></i>
+                    <h3>Role Management</h3>
+                    <p>Set up different support roles with varying permissions to create a hierarchical support structure.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>Auto-Close Settings</h3>
+                    <p>Configure appropriate auto-close timers to keep your server clean while giving users enough time to respond.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>Save Transcripts</h3>
+                    <p>Always generate transcripts before closing important tickets for future reference and quality assurance.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Monitor Statistics</h3>
+                    <p>Regularly check ticket statistics to identify trends and improve your support processes.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-bell"></i>
+                    <h3>Notification Setup</h3>
+                    <p>Configure ticket logs to stay informed about all ticket activities and ensure no tickets are missed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                        <h3>Dravon Bot</h3>
+                    </div>
+                    <p>Professional ticket system for organized and efficient customer support.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="../index.html">Home</a></li>
+                        <li><a href="../index.html#commands">All Commands</a></li>
+                        <li><a href="https://discord.gg/UKR78VcEtg" target="_blank">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Other Categories</h4>
+                    <ul>
+                        <li><a href="moderation.html">Moderation</a></li>
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="music.html">Music</a></li>
+                        <li><a href="premium.html">Premium</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Dravon Bot. All rights reserved. | Made with ❤️ for Discord communities</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

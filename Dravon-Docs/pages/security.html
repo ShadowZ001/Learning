@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security & AntiNuke - Dravon Bot Documentation</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/pages.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                <span>Dravon Docs</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="../index.html" class="nav-link">Home</a>
+                <a href="../index.html#getting-started" class="nav-link">Getting Started</a>
+                <a href="../index.html#commands" class="nav-link">Commands</a>
+                <a href="https://discord.gg/UKR78VcEtg" class="nav-link" target="_blank">
+                    <i class="fab fa-discord"></i>
+                    <span>Support</span>
+                </a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <div class="header-content">
+                <i class="fas fa-shield-alt"></i>
+                <h1>Security & AntiNuke v6.0</h1>
+                <p>Advanced server protection system with intelligent threat detection and prevention</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Setup Guide -->
+    <section class="section">
+        <div class="container">
+            <h2>Setup Guide</h2>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Enable AntiNuke</h3>
+                        <p>Activate the AntiNuke system to protect your server from malicious activities.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>antinuke enable
+# Enables basic protection with default settings
+# Protects against mass bans, kicks, channel deletion, etc.</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Configure Whitelist</h3>
+                        <p>Add trusted users who can bypass AntiNuke protection.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>whitelist add @user
+# Adds user to whitelist (bypasses all protection)
+
+>extraowner add @user  
+# Adds user as extra owner (highest permissions)</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Set Protection Limits</h3>
+                        <p>Configure action limits and punishment settings for optimal protection.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>antinuke config
+# Opens interactive configuration menu
+# Set limits for bans, kicks, channel actions, etc.
+# Configure punishment: ban, kick, or strip roles</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands List -->
+    <section id="commands" class="section bg-dark">
+        <div class="container">
+            <h2>Commands List</h2>
+            <div class="commands-grid">
+                <div class="command-card">
+                    <h3><i class="fas fa-toggle-on"></i> AntiNuke Control</h3>
+                    <div class="command-item">
+                        <code>>antinuke enable</code>
+                        <p>Enable AntiNuke protection system</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke disable</code>
+                        <p>Disable AntiNuke protection system</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke config</code>
+                        <p>Open interactive configuration menu</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke status</code>
+                        <p>View current AntiNuke settings and status</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-user-check"></i> Whitelist Management</h3>
+                    <div class="command-item">
+                        <code>>whitelist add &lt;user&gt;</code>
+                        <p>Add user to AntiNuke whitelist</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>whitelist remove &lt;user&gt;</code>
+                        <p>Remove user from whitelist</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>whitelist list</code>
+                        <p>View all whitelisted users</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>whitelist clear</code>
+                        <p>Remove all users from whitelist</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-crown"></i> Extra Owner System</h3>
+                    <div class="command-item">
+                        <code>>extraowner add &lt;user&gt;</code>
+                        <p>Add user as extra owner (highest permissions)</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>extraowner remove &lt;user&gt;</code>
+                        <p>Remove extra owner status</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>extraowner list</code>
+                        <p>View all extra owners</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-cog"></i> Protection Settings</h3>
+                    <div class="command-item">
+                        <code>>antinuke punishment &lt;type&gt;</code>
+                        <p>Set punishment: ban, kick, or strip</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke limit &lt;action&gt; &lt;number&gt;</code>
+                        <p>Set action limits (bans, kicks, etc.)</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke logs &lt;channel&gt;</code>
+                        <p>Set AntiNuke logging channel</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-history"></i> Security Logs</h3>
+                    <div class="command-item">
+                        <code>>antinuke recent</code>
+                        <p>View recent AntiNuke actions</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke stats</code>
+                        <p>View protection statistics</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>antinuke reset</code>
+                        <p>Reset all AntiNuke settings</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-ban"></i> Manual Actions</h3>
+                    <div class="command-item">
+                        <code>>nuke &lt;user&gt;</code>
+                        <p>Manually trigger AntiNuke punishment</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>unnuke &lt;user&gt;</code>
+                        <p>Reverse AntiNuke punishment</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Protection Features -->
+    <section class="section">
+        <div class="container">
+            <h2>Protection Features</h2>
+            <div class="commands-grid">
+                <div class="feature-card">
+                    <h3><i class="fas fa-hammer"></i> Mass Action Protection</h3>
+                    <p>Prevents mass bans, kicks, and other destructive actions.</p>
+                    <ul class="feature-list">
+                        <li>Mass ban detection</li>
+                        <li>Mass kick prevention</li>
+                        <li>Bulk role changes</li>
+                        <li>Configurable thresholds</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-hashtag"></i> Channel Protection</h3>
+                    <p>Safeguards against channel deletion and modification.</p>
+                    <ul class="feature-list">
+                        <li>Channel deletion prevention</li>
+                        <li>Mass channel creation</li>
+                        <li>Permission overwrites</li>
+                        <li>Category modifications</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-users-cog"></i> Role Protection</h3>
+                    <p>Prevents unauthorized role creation and modification.</p>
+                    <ul class="feature-list">
+                        <li>Role deletion prevention</li>
+                        <li>Mass role creation</li>
+                        <li>Permission escalation</li>
+                        <li>Admin role protection</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-server"></i> Server Protection</h3>
+                    <p>Comprehensive server-wide security measures.</p>
+                    <ul class="feature-list">
+                        <li>Server settings protection</li>
+                        <li>Webhook management</li>
+                        <li>Invite flood prevention</li>
+                        <li>Bot addition monitoring</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-robot"></i> Bot Protection</h3>
+                    <p>Advanced protection against malicious bots.</p>
+                    <ul class="feature-list">
+                        <li>Suspicious bot detection</li>
+                        <li>Mass bot addition</li>
+                        <li>Bot permission monitoring</li>
+                        <li>Automated bot removal</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-eye"></i> Real-time Monitoring</h3>
+                    <p>Continuous monitoring and instant response.</p>
+                    <ul class="feature-list">
+                        <li>Real-time threat detection</li>
+                        <li>Instant punishment</li>
+                        <li>Detailed logging</li>
+                        <li>Alert notifications</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples -->
+    <section id="examples" class="section bg-dark">
+        <div class="container">
+            <h2>Configuration Examples</h2>
+            <div class="examples-grid">
+                <div class="example-card">
+                    <h3>Basic Setup</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Enable AntiNuke with default settings
+>antinuke enable
+
+# Add trusted moderators to whitelist
+>whitelist add @moderator1
+>whitelist add @moderator2
+
+# Set logging channel
+>antinuke logs #security-logs</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Advanced Configuration</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Set custom limits
+>antinuke limit ban 3      # Max 3 bans per minute
+>antinuke limit kick 5     # Max 5 kicks per minute
+>antinuke limit channel 2  # Max 2 channel deletions
+
+# Set punishment to ban
+>antinuke punishment ban</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Emergency Response</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Manual nuke a compromised account
+>nuke @compromised_user
+
+# Check recent AntiNuke actions
+>antinuke recent
+
+# View protection statistics
+>antinuke stats</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pro Tips -->
+    <section class="section">
+        <div class="container">
+            <h2>Security Best Practices</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Whitelist Carefully</h3>
+                    <p>Only whitelist users you completely trust. Whitelisted users can bypass all AntiNuke protection.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-cogs"></i>
+                    <h3>Configure Limits</h3>
+                    <p>Set appropriate action limits based on your server size and activity. Too strict may cause false positives.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-eye"></i>
+                    <h3>Monitor Logs</h3>
+                    <p>Regularly check AntiNuke logs to understand threats and adjust settings accordingly.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Role Hierarchy</h3>
+                    <p>Ensure Dravon's role is at the top of your server's role hierarchy for maximum protection.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-backup"></i>
+                    <h3>Backup Settings</h3>
+                    <p>Document your AntiNuke configuration. Use >antinuke status to export current settings.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>Regular Updates</h3>
+                    <p>Keep your whitelist updated. Remove users who no longer need elevated permissions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                        <h3>Dravon Bot</h3>
+                    </div>
+                    <p>Advanced Discord server security with AntiNuke v6.0 protection system.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="../index.html">Home</a></li>
+                        <li><a href="../index.html#commands">All Commands</a></li>
+                        <li><a href="https://discord.gg/UKR78VcEtg" target="_blank">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Other Categories</h4>
+                    <ul>
+                        <li><a href="moderation.html">Moderation</a></li>
+                        <li><a href="music.html">Music</a></li>
+                        <li><a href="tickets.html">Tickets</a></li>
+                        <li><a href="premium.html">Premium</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Dravon Bot. All rights reserved. | Made with ❤️ for Discord communities</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

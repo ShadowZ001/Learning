@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderation Commands - Dravon Bot Documentation</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/pages.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                <span>Dravon Docs</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="../index.html" class="nav-link">Home</a>
+                <a href="../index.html#getting-started" class="nav-link">Getting Started</a>
+                <a href="../index.html#commands" class="nav-link">Commands</a>
+                <a href="https://discord.gg/UKR78VcEtg" class="nav-link" target="_blank">
+                    <i class="fab fa-discord"></i>
+                    <span>Support</span>
+                </a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <div class="header-content">
+                <i class="fas fa-shield-alt"></i>
+                <h1>Moderation Commands</h1>
+                <p>Powerful moderation tools to manage your server effectively with advanced features</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Setup Guide -->
+    <section class="section">
+        <div class="container">
+            <h2>Setup Guide</h2>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Basic Setup</h3>
+                        <p>No initial setup required! Moderation commands work out of the box with proper permissions.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code># Ensure Dravon has these permissions:
+• Manage Messages
+• Kick Members  
+• Ban Members
+• Manage Roles (for mute)
+• View Audit Log</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Configure Mute Role</h3>
+                        <p>Create a muted role or let Dravon create one automatically when first using mute commands.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>mute @user 10m Spamming
+# Dravon will automatically create a "Muted" role if none exists
+# The role will be configured to deny Send Messages in all channels</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Set Up Logging</h3>
+                        <p>Configure moderation logs to track all moderation actions and maintain server security.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>logs setup
+# Select moderation logs channel
+# All bans, kicks, mutes, and warnings will be logged</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands List -->
+    <section id="commands" class="section bg-dark">
+        <div class="container">
+            <h2>Commands List</h2>
+            <div class="commands-grid">
+                <div class="command-card">
+                    <h3><i class="fas fa-hammer"></i> Ban Commands</h3>
+                    <div class="command-item">
+                        <code>>ban &lt;user&gt; [reason]</code>
+                        <p>Permanently ban a user from the server</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>unban &lt;user_id&gt;</code>
+                        <p>Remove a ban from a user using their ID</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>tempban &lt;user&gt; &lt;time&gt; [reason]</code>
+                        <p>Temporarily ban a user (auto-unbans after time)</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>massban &lt;user1&gt; &lt;user2&gt; [reason]</code>
+                        <p>Ban multiple users at once</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-door-open"></i> Kick Commands</h3>
+                    <div class="command-item">
+                        <code>>kick &lt;user&gt; [reason]</code>
+                        <p>Remove a user from the server</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>masskick &lt;user1&gt; &lt;user2&gt; [reason]</code>
+                        <p>Kick multiple users at once</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-volume-mute"></i> Mute Commands</h3>
+                    <div class="command-item">
+                        <code>>mute &lt;user&gt; [time] [reason]</code>
+                        <p>Mute a user for a specified time</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>unmute &lt;user&gt;</code>
+                        <p>Remove mute from a user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>tempmute &lt;user&gt; &lt;time&gt; [reason]</code>
+                        <p>Temporarily mute with auto-unmute</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Warning System</h3>
+                    <div class="command-item">
+                        <code>>warn &lt;user&gt; [reason]</code>
+                        <p>Issue a warning to a user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>warnings &lt;user&gt;</code>
+                        <p>View all warnings for a user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>clearwarns &lt;user&gt;</code>
+                        <p>Clear all warnings for a user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>delwarn &lt;user&gt; &lt;warning_id&gt;</code>
+                        <p>Delete a specific warning</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-broom"></i> Cleanup Commands</h3>
+                    <div class="command-item">
+                        <code>>purge &lt;amount&gt;</code>
+                        <p>Delete multiple messages at once (max 100)</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>purge &lt;amount&gt; &lt;user&gt;</code>
+                        <p>Delete messages from a specific user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>purge &lt;amount&gt; bots</code>
+                        <p>Delete messages from bots only</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-user-slash"></i> Timeout Commands</h3>
+                    <div class="command-item">
+                        <code>>timeout &lt;user&gt; &lt;time&gt; [reason]</code>
+                        <p>Discord native timeout (max 28 days)</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>untimeout &lt;user&gt;</code>
+                        <p>Remove timeout from a user</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples -->
+    <section id="examples" class="section">
+        <div class="container">
+            <h2>Usage Examples</h2>
+            <div class="examples-grid">
+                <div class="example-card">
+                    <h3>Basic Moderation</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Ban a user with reason
+>ban @spammer Repeated spam after multiple warnings
+
+# Kick a user  
+>kick @troublemaker Inappropriate behavior in chat
+
+# Mute for 30 minutes
+>mute @user 30m Please follow server rules</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Time-based Actions</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Different time formats
+>mute @user 10s    # 10 seconds
+>mute @user 5m     # 5 minutes  
+>mute @user 2h     # 2 hours
+>mute @user 1d     # 1 day
+>tempban @user 7d  # 7 day temporary ban</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Bulk Actions</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Delete last 50 messages
+>purge 50
+
+# Delete last 20 messages from specific user
+>purge 20 @user
+
+# Delete bot messages only
+>purge 30 bots
+
+# Mass ban multiple users
+>massban @user1 @user2 @user3 Raid attempt</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Advanced Features -->
+    <section class="section bg-dark">
+        <div class="container">
+            <h2>Advanced Features</h2>
+            <div class="commands-grid">
+                <div class="feature-card">
+                    <h3><i class="fas fa-robot"></i> Auto-Moderation</h3>
+                    <p>Dravon includes built-in auto-moderation features that work alongside manual commands.</p>
+                    <ul class="feature-list">
+                        <li>Anti-spam detection</li>
+                        <li>Auto-mute for excessive caps</li>
+                        <li>Link filtering</li>
+                        <li>Bad word detection</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-history"></i> Moderation History</h3>
+                    <p>Track all moderation actions with detailed logging and history.</p>
+                    <ul class="feature-list">
+                        <li>Complete audit trail</li>
+                        <li>Moderator accountability</li>
+                        <li>Appeal system integration</li>
+                        <li>Export capabilities</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-cogs"></i> Custom Settings</h3>
+                    <p>Customize moderation behavior to fit your server's needs.</p>
+                    <ul class="feature-list">
+                        <li>Custom mute role configuration</li>
+                        <li>Warning thresholds</li>
+                        <li>Auto-punishment escalation</li>
+                        <li>Role-based permissions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pro Tips -->
+    <section class="section">
+        <div class="container">
+            <h2>Pro Tips</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-lightbulb"></i>
+                    <h3>Always Use Reasons</h3>
+                    <p>Provide clear reasons for all moderation actions. They appear in audit logs, DMs to users, and help track patterns of behavior.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>Temporary Actions</h3>
+                    <p>Use temporary mutes and bans when appropriate. They automatically expire without manual intervention, reducing moderator workload.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Role Hierarchy</h3>
+                    <p>Ensure Dravon's role is above the roles you want to moderate. Check role positions in Server Settings > Roles.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Team Coordination</h3>
+                    <p>Use the warning system to communicate with other moderators about problematic users and track escalation.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Monitor Patterns</h3>
+                    <p>Review moderation logs regularly to identify trends and adjust your server rules or auto-mod settings accordingly.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-balance-scale"></i>
+                    <h3>Consistent Enforcement</h3>
+                    <p>Apply rules consistently across all members. Document your moderation guidelines for your team to follow.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                        <h3>Dravon Bot</h3>
+                    </div>
+                    <p>Advanced Discord server management with comprehensive moderation tools.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="../index.html">Home</a></li>
+                        <li><a href="../index.html#commands">All Commands</a></li>
+                        <li><a href="https://discord.gg/UKR78VcEtg" target="_blank">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Other Categories</h4>
+                    <ul>
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="music.html">Music</a></li>
+                        <li><a href="tickets.html">Tickets</a></li>
+                        <li><a href="premium.html">Premium</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Dravon Bot. All rights reserved. | Made with ❤️ for Discord communities</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

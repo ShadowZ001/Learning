@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level System - Dravon Bot Documentation</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/pages.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                <span>Dravon Docs</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="../index.html" class="nav-link">Home</a>
+                <a href="../index.html#getting-started" class="nav-link">Getting Started</a>
+                <a href="../index.html#commands" class="nav-link">Commands</a>
+                <a href="https://discord.gg/UKR78VcEtg" class="nav-link" target="_blank">
+                    <i class="fab fa-discord"></i>
+                    <span>Support</span>
+                </a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <div class="header-content">
+                <i class="fas fa-chart-line"></i>
+                <h1>Level System</h1>
+                <p>Engaging XP and leveling system with rewards, leaderboards, and community competition</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Setup Guide -->
+    <section class="section">
+        <div class="container">
+            <h2>Setup Guide</h2>
+            <div class="setup-steps">
+                <div class="setup-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Enable Level System</h3>
+                        <p>Activate the leveling system to start tracking user activity and XP.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>levels enable
+# Enables XP tracking for all server members
+# Users gain XP by sending messages and being active</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Configure XP Settings</h3>
+                        <p>Customize XP gain rates and cooldowns to match your server's activity.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>levels config xp 15-25
+# Set XP range per message (15-25 XP)
+
+>levels config cooldown 60
+# Set cooldown between XP gains (60 seconds)</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Set Up Level Rewards</h3>
+                        <p>Create role rewards for reaching specific levels to motivate users.</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            <pre><code>>levels reward add 5 @Active Member
+>levels reward add 10 @Regular
+>levels reward add 25 @Veteran
+# Users automatically get roles when reaching levels</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands List -->
+    <section id="commands" class="section bg-dark">
+        <div class="container">
+            <h2>Commands List</h2>
+            <div class="commands-grid">
+                <div class="command-card">
+                    <h3><i class="fas fa-cog"></i> System Management</h3>
+                    <div class="command-item">
+                        <code>>levels enable</code>
+                        <p>Enable the leveling system</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels disable</code>
+                        <p>Disable the leveling system</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels reset</code>
+                        <p>Reset all user levels and XP</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels config</code>
+                        <p>View current level system configuration</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-user"></i> User Commands</h3>
+                    <div class="command-item">
+                        <code>>rank [user]</code>
+                        <p>View your or another user's rank card</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>level [user]</code>
+                        <p>Check current level and XP</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>xp [user]</code>
+                        <p>View detailed XP information</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-trophy"></i> Leaderboards</h3>
+                    <div class="command-item">
+                        <code>>leaderboard</code>
+                        <p>View server XP leaderboard</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>top</code>
+                        <p>Show top 10 users by level</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>weekly</code>
+                        <p>Weekly XP leaderboard</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>monthly</code>
+                        <p>Monthly XP leaderboard</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-gift"></i> Reward Management</h3>
+                    <div class="command-item">
+                        <code>>levels reward add &lt;level&gt; &lt;role&gt;</code>
+                        <p>Add role reward for specific level</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels reward remove &lt;level&gt;</code>
+                        <p>Remove reward for specific level</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels rewards</code>
+                        <p>View all configured rewards</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-sliders-h"></i> Configuration</h3>
+                    <div class="command-item">
+                        <code>>levels config xp &lt;min-max&gt;</code>
+                        <p>Set XP range per message</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels config cooldown &lt;seconds&gt;</code>
+                        <p>Set XP gain cooldown</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels config channel &lt;channel&gt;</code>
+                        <p>Set level-up announcement channel</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels config message &lt;text&gt;</code>
+                        <p>Customize level-up message</p>
+                    </div>
+                </div>
+
+                <div class="command-card">
+                    <h3><i class="fas fa-tools"></i> Admin Tools</h3>
+                    <div class="command-item">
+                        <code>>levels set &lt;user&gt; &lt;level&gt;</code>
+                        <p>Set user's level manually</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels add &lt;user&gt; &lt;xp&gt;</code>
+                        <p>Add XP to user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels remove &lt;user&gt; &lt;xp&gt;</code>
+                        <p>Remove XP from user</p>
+                    </div>
+                    <div class="command-item">
+                        <code>>levels import</code>
+                        <p>Import levels from another bot</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="commands-grid">
+                <div class="feature-card">
+                    <h3><i class="fas fa-chart-bar"></i> XP Tracking</h3>
+                    <p>Comprehensive experience point system with smart tracking.</p>
+                    <ul class="feature-list">
+                        <li>Message-based XP gain</li>
+                        <li>Anti-spam protection</li>
+                        <li>Customizable XP rates</li>
+                        <li>Activity-based bonuses</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-image"></i> Custom Rank Cards</h3>
+                    <p>Beautiful, personalized rank cards for each user.</p>
+                    <ul class="feature-list">
+                        <li>Dynamic progress bars</li>
+                        <li>User avatars and banners</li>
+                        <li>Server branding</li>
+                        <li>Multiple card themes</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-trophy"></i> Leaderboards</h3>
+                    <p>Competitive leaderboards to drive engagement.</p>
+                    <ul class="feature-list">
+                        <li>Global server rankings</li>
+                        <li>Weekly competitions</li>
+                        <li>Monthly challenges</li>
+                        <li>Role-based leaderboards</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-gift"></i> Role Rewards</h3>
+                    <p>Automatic role assignment based on level achievements.</p>
+                    <ul class="feature-list">
+                        <li>Multiple reward tiers</li>
+                        <li>Automatic role assignment</li>
+                        <li>Custom reward messages</li>
+                        <li>Stack or replace options</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-bell"></i> Level Announcements</h3>
+                    <p>Celebrate user achievements with customizable announcements.</p>
+                    <ul class="feature-list">
+                        <li>Custom level-up messages</li>
+                        <li>Dedicated announcement channels</li>
+                        <li>Milestone celebrations</li>
+                        <li>Achievement notifications</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h3><i class="fas fa-shield-alt"></i> Anti-Abuse System</h3>
+                    <p>Prevent XP farming and maintain fair competition.</p>
+                    <ul class="feature-list">
+                        <li>Spam detection</li>
+                        <li>Cooldown mechanisms</li>
+                        <li>Bot message filtering</li>
+                        <li>Channel restrictions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples -->
+    <section id="examples" class="section bg-dark">
+        <div class="container">
+            <h2>Configuration Examples</h2>
+            <div class="examples-grid">
+                <div class="example-card">
+                    <h3>Basic Setup</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Enable leveling system
+>levels enable
+
+# Set XP range (10-20 XP per message)
+>levels config xp 10-20
+
+# Set 1 minute cooldown
+>levels config cooldown 60</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Reward Configuration</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Add role rewards for different levels
+>levels reward add 5 @Newcomer
+>levels reward add 15 @Active
+>levels reward add 30 @Veteran
+>levels reward add 50 @Legend</code></pre>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <h3>Customization</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        <pre><code># Set level-up announcement channel
+>levels config channel #level-ups
+
+# Custom level-up message
+>levels config message "🎉 {user} reached level {level}!"
+
+# Check current configuration
+>levels config</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Level Progression -->
+    <section class="section">
+        <div class="container">
+            <h2>Level Progression System</h2>
+            <div class="progression-info">
+                <div class="progression-card">
+                    <h3>XP Calculation</h3>
+                    <p>The XP required for each level increases progressively:</p>
+                    <div class="formula">
+                        <code>XP Required = Level² × 100</code>
+                    </div>
+                    <div class="level-examples">
+                        <div class="level-example">
+                            <span class="level">Level 1</span>
+                            <span class="xp">100 XP</span>
+                        </div>
+                        <div class="level-example">
+                            <span class="level">Level 5</span>
+                            <span class="xp">2,500 XP</span>
+                        </div>
+                        <div class="level-example">
+                            <span class="level">Level 10</span>
+                            <span class="xp">10,000 XP</span>
+                        </div>
+                        <div class="level-example">
+                            <span class="level">Level 25</span>
+                            <span class="xp">62,500 XP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progression-card">
+                    <h3>XP Sources</h3>
+                    <p>Users can gain XP through various activities:</p>
+                    <ul class="xp-sources">
+                        <li><i class="fas fa-comment"></i> Sending messages (configurable XP)</li>
+                        <li><i class="fas fa-microphone"></i> Voice channel activity</li>
+                        <li><i class="fas fa-gamepad"></i> Playing games with bot</li>
+                        <li><i class="fas fa-gift"></i> Daily bonuses</li>
+                        <li><i class="fas fa-star"></i> Special events</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pro Tips -->
+    <section class="section bg-dark">
+        <div class="container">
+            <h2>Pro Tips</h2>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-balance-scale"></i>
+                    <h3>Balance XP Rates</h3>
+                    <p>Set appropriate XP ranges to maintain engagement without making progression too easy or difficult.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-gift"></i>
+                    <h3>Meaningful Rewards</h3>
+                    <p>Create role rewards that provide actual benefits like access to special channels or permissions.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>Cooldown Settings</h3>
+                    <p>Use appropriate cooldowns (30-120 seconds) to prevent spam while allowing natural conversation flow.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Monitor Activity</h3>
+                    <p>Regularly check leaderboards and adjust settings based on your server's activity patterns.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Community Events</h3>
+                    <p>Host XP boost events or competitions to increase engagement and community participation.</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Prevent Abuse</h3>
+                    <p>Monitor for XP farming and adjust settings or manually moderate if necessary to maintain fairness.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-logo">
+                        <img src="https://cdn.discordapp.com/avatars/1412942933405208668/avatar.png" alt="Dravon Bot">
+                        <h3>Dravon Bot</h3>
+                    </div>
+                    <p>Engaging level system to build active and competitive Discord communities.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="../index.html">Home</a></li>
+                        <li><a href="../index.html#commands">All Commands</a></li>
+                        <li><a href="https://discord.gg/UKR78VcEtg" target="_blank">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Other Categories</h4>
+                    <ul>
+                        <li><a href="moderation.html">Moderation</a></li>
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="music.html">Music</a></li>
+                        <li><a href="tickets.html">Tickets</a></li>
+                        <li><a href="premium.html">Premium</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Dravon Bot. All rights reserved. | Made with ❤️ for Discord communities</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

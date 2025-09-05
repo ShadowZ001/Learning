@@ -1,0 +1,5 @@
+{
+      "name": "Default Dev",
+        "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu"
+        }
+    
