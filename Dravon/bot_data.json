@@ -1,0 +1,89 @@
+{
+  "prefixes": {
+    "1369352923221590047": ","
+  },
+  "welcome_configs": {
+    "1369352923221590047": {
+      "title": "Hi",
+      "description": "Nothing",
+      "color": "#7289da",
+      "image_url": null,
+      "thumbnail_url": null,
+      "footer": null,
+      "dm_welcome": false,
+      "channel_id": 1369352923250692178
+    }
+  },
+  "autoresponders": {
+    "1369352923221590047": {
+      "ki": {
+        "pattern": "exact",
+        "title": "Lol",
+        "description": "Testing",
+        "color": "#ff6863",
+        "author": null,
+        "thumbnail": null
+      }
+    }
+  },
+  "invite_configs": {
+    "1369352923221590047": {
+      "tracking_channel": 1369352923250692182
+    }
+  },
+  "autorule_configs": {
+    "1369352923221590047": {
+      "all_caps": {
+        "rule_type": "all_caps",
+        "caps_percentage": 60,
+        "action": "delete",
+        "enabled": true
+      },
+      "bad_words": {
+        "rule_type": "bad_words",
+        "banned_words": [
+          "fuck",
+          "bitch",
+          "bsdk"
+        ],
+        "action": "delete",
+        "enabled": true
+      },
+      "invite_links": {
+        "rule_type": "invite_links",
+        "action": "delete",
+        "enabled": true
+      },
+      "image_spam": {
+        "rule_type": "image_spam",
+        "action": "delete",
+        "enabled": true
+      },
+      "mass_mentions": {
+        "rule_type": "mass_mentions",
+        "action": "delete",
+        "enabled": true
+      }
+    }
+  },
+  "automod_rules": {
+    "1369352923221590047": {
+      "duplicate_text": {
+        "category": "message_formatting",
+        "filter_type": "duplicate_text",
+        "action": "warn",
+        "enabled": true
+      }
+    }
+  },
+  "antinuke_rules": {
+    "1369352923221590047": {
+      "bot_protection": {
+        "category": "member_protection",
+        "rule_type": "bot_protection",
+        "action": "quarantine",
+        "enabled": true
+      }
+    }
+  }
+}
