@@ -1,411 +1,479 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+import asyncio
+import time
+from datetime import datetime, timedelta
+from utils.embed_utils import add_dravon_footer
 
-class AntiNukeCategoryView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=900)
+class AntiNukeSetupView(discord.ui.View):
+    def __init__(self, bot, guild):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild = guild
     
     @discord.ui.select(
-        placeholder="🛡️ Choose Protection Category...",
+        placeholder="🛡️ Configure AntiNuke Protection...",
         options=[
-            discord.SelectOption(label="⚡ Role & Permission Protection", description="Mass role actions, permission abuse detection", value="role_protection"),
-            discord.SelectOption(label="🏗️ Channel & Server Protection", description="Channel/webhook spam, server setting protection", value="channel_protection"),
-            discord.SelectOption(label="👥 Member Protection", description="Mass ban/kick, bot protection, raid defense", value="member_protection"),
-            discord.SelectOption(label="🔒 General Safeguards", description="Audit tracking, punishment system, auto-heal", value="general_safeguards")
+            discord.SelectOption(label="🔧 Enable/Disable System", description="Toggle AntiNuke protection", value="toggle"),
+            discord.SelectOption(label="👥 Manage Whitelist", description="Add/remove whitelisted users", value="whitelist"),
+            discord.SelectOption(label="⚡ Protection Level", description="Basic, Strong, or Extreme", value="level"),
+            discord.SelectOption(label="⚖️ Auto Punishment", description="Set punishment type", value="punishment"),
+            discord.SelectOption(label="📝 Logging Channel", description="Set logs channel", value="logs"),
+            discord.SelectOption(label="🚨 Auto Alerts", description="DM owner on threats", value="alerts")
         ]
     )
-    async def category_select(self, interaction: discord.Interaction, select: discord.ui.Select):
-        category = select.values[0]
+    async def setup_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        value = select.values[0]
         
-        if category == "role_protection":
-            view = RuleSelectView("role_protection")
+        if value == "toggle":
             embed = discord.Embed(
-                title="⚡ Role & Permission Protection Configuration",
-                description="Configure advanced protection against role manipulation and permission abuse attacks that could compromise your server's security structure.",
-                color=0xff0000
+                title="🛡️ AntiNuke System Toggle",
+                description="Choose to enable or disable the AntiNuke system",
+                color=0xff6b35
             )
-        elif category == "channel_protection":
-            view = RuleSelectView("channel_protection")
-            embed = discord.Embed(
-                title="🏗️ Channel & Server Protection Configuration",
-                description="Set up comprehensive protection against channel destruction, webhook spam, and server setting manipulation attempts.",
-                color=0xff0000
-            )
-        elif category == "member_protection":
-            view = RuleSelectView("member_protection")
-            embed = discord.Embed(
-                title="👥 Member Protection Configuration",
-                description="Configure defense systems against mass member actions, unauthorized bot additions, and coordinated raid attacks.",
-                color=0xff0000
-            )
-        elif category == "general_safeguards":
-            view = RuleSelectView("general_safeguards")
-            embed = discord.Embed(
-                title="🔒 General Safeguards Configuration",
-                description="Set up comprehensive monitoring, punishment systems, and automatic recovery mechanisms for complete server protection.",
-                color=0xff0000
-            )
-        
-        await interaction.response.edit_message(embed=embed, view=view)
-
-class RuleSelectView(discord.ui.View):
-    def __init__(self, category):
-        super().__init__(timeout=900)
-        self.category = category
-        
-        if category == "role_protection":
-            options = [
-                discord.SelectOption(label="Mass Role Delete", description="Detect and prevent bulk role deletion attacks", value="mass_role_delete"),
-                discord.SelectOption(label="Mass Role Create", description="Block spam role creation attempts", value="mass_role_create"),
-                discord.SelectOption(label="Permission Abuse", description="Detect dangerous permission grants", value="permission_abuse"),
-                discord.SelectOption(label="Self-Elevation Protection", description="Prevent staff from elevating permissions", value="self_elevation")
-            ]
-        elif category == "channel_protection":
-            options = [
-                discord.SelectOption(label="Mass Channel Delete", description="Auto-restore deleted channels", value="mass_channel_delete"),
-                discord.SelectOption(label="Mass Channel Create", description="Prevent channel spam creation", value="mass_channel_create"),
-                discord.SelectOption(label="Webhook Spam Blocker", description="Delete unauthorized webhooks instantly", value="webhook_spam"),
-                discord.SelectOption(label="Server Lock Protection", description="Prevent server setting changes", value="server_lock")
-            ]
-        elif category == "member_protection":
-            options = [
-                discord.SelectOption(label="Mass Ban/Kick", description="Detect suspicious member purges", value="mass_ban_kick"),
-                discord.SelectOption(label="Bot Add Protection", description="Block unauthorized bot additions", value="bot_protection"),
-                discord.SelectOption(label="Alt-Account Detector", description="Detect mass new account joins", value="alt_detector"),
-                discord.SelectOption(label="Mass Mention Flood", description="Defend against raid pings", value="mention_flood")
-            ]
-        elif category == "general_safeguards":
-            options = [
-                discord.SelectOption(label="Audit Log Tracking", description="Monitor all administrative actions", value="audit_tracking"),
-                discord.SelectOption(label="Auto-Heal Mode", description="Instantly restore deleted content", value="auto_heal"),
-                discord.SelectOption(label="Smart Alerts", description="Advanced notification system", value="smart_alerts"),
-                discord.SelectOption(label="Bypass System", description="Whitelist trusted users/roles", value="bypass_system")
-            ]
-        
-        self.add_item(RuleSelect(options, self.category))
-
-class RuleSelect(discord.ui.Select):
-    def __init__(self, options, category):
-        super().__init__(placeholder="Select a protection rule to configure...", options=options)
-        self.category = category
-    
-    async def callback(self, interaction: discord.Interaction):
-        rule_type = self.values[0]
-        
-        embed = discord.Embed(
-            title=f"⚙️ {self.options[[opt.value for opt in self.options].index(rule_type)].label} Configuration",
-            description="Configure the detection thresholds and enforcement actions for this protection rule to ensure optimal security without false positives.",
-            color=0xff0000
-        )
-        
-        # Add rule-specific configuration info
-        if rule_type == "mass_role_delete":
-            embed.add_field(name="Threshold", value="3 roles deleted in 10 seconds", inline=False)
-            embed.add_field(name="Action", value="Block & Auto-restore deleted roles", inline=False)
-        elif rule_type == "mass_channel_delete":
-            embed.add_field(name="Threshold", value="2 channels deleted in 5 seconds", inline=False)
-            embed.add_field(name="Action", value="Revert & Punish executor", inline=False)
-        elif rule_type == "mass_ban_kick":
-            embed.add_field(name="Threshold", value="5 members banned/kicked in 30 seconds", inline=False)
-            embed.add_field(name="Action", value="Stop action & Alert administrators", inline=False)
-        
-        view = ActionSelectView(rule_type, self.category)
-        await interaction.response.edit_message(embed=embed, view=view)
-
-class ActionSelectView(discord.ui.View):
-    def __init__(self, rule_type, category):
-        super().__init__(timeout=900)
-        self.rule_type = rule_type
-        self.category = category
-    
-    @discord.ui.select(
-        placeholder="Choose enforcement action...",
-        options=[
-            discord.SelectOption(label="🚫 Revert", description="Instantly restore deleted content", value="revert"),
-            discord.SelectOption(label="⚠️ Warn", description="Send alert + DM owner", value="warn"),
-            discord.SelectOption(label="🔇 Mute", description="Auto mute executor", value="mute"),
-            discord.SelectOption(label="🔨 Temp-Ban", description="Temporary ban executor", value="temp_ban"),
-            discord.SelectOption(label="🚫 Ban", description="Permanently ban executor", value="ban"),
-            discord.SelectOption(label="🔒 Lockdown", description="Lock all channels temporarily", value="lockdown"),
-            discord.SelectOption(label="🛡️ Quarantine", description="Restrict to isolation role", value="quarantine")
-        ]
-    )
-    async def action_select(self, interaction: discord.Interaction, select: discord.ui.Select):
-        action = select.values[0]
-        
-        # Save the antinuke rule
-        bot = interaction.client
-        rule_config = {
-            "category": self.category,
-            "rule_type": self.rule_type,
-            "action": action,
-            "enabled": True
-        }
-        
-        await bot.db.set_antinuke_rule(interaction.guild.id, self.rule_type, rule_config)
-        
-        embed = discord.Embed(
-            title="✅ AntiNuke Protection Rule Successfully Configured",
-            description=f"**Protection:** {self.rule_type.replace('_', ' ').title()}\n**Action:** {action.replace('_', ' ').title()}\n\nYour server is now protected against this type of attack. The system will automatically detect and respond to threats according to your configured parameters.",
-            color=0x00ff00
-        )
-        
-        # Return to main setup
-        view = MainAntiNukeView()
-        await interaction.response.edit_message(embed=embed, view=view)
-
-class MainAntiNukeView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=900)
-    
-    @discord.ui.select(
-        placeholder="🛡️ Choose AntiNuke Action...",
-        options=[
-            discord.SelectOption(label="📦 Configure Protection", description="Set up protection categories", value="configure"),
-            discord.SelectOption(label="📊 View Status", description="See active protections", value="status"),
-            discord.SelectOption(label="📝 View Logs", description="Check recent incidents", value="logs"),
-            discord.SelectOption(label="👥 Manage Whitelist", description="Add/remove trusted users", value="whitelist"),
-            discord.SelectOption(label="⚙️ Toggle System", description="Enable/disable AntiNuke", value="toggle")
-        ]
-    )
-    async def main_action_select(self, interaction: discord.Interaction, select: discord.ui.Select):
-        action = select.values[0]
-        
-        if action == "configure":
-            view = AntiNukeCategoryView()
-            embed = discord.Embed(
-                title="🛡️ AntiNuke Protection Categories",
-                description="Select a protection category to configure advanced security rules and thresholds for your server's comprehensive defense system.",
-                color=0xff0000
-            )
+            view = ToggleView(self.bot, self.guild)
             await interaction.response.edit_message(embed=embed, view=view)
         
-        elif action == "status":
-            rules = await interaction.client.db.get_all_antinuke_rules(interaction.guild.id)
-            
+        elif value == "level":
             embed = discord.Embed(
-                title="📊 AntiNuke System Status & Active Protections",
-                description=f"**System Status:** ✅ Active\n**Protection Rules:** {len(rules)}\n**Threats Blocked Today:** 0\n**Last Incident:** None detected",
-                color=0x00ff00
+                title="⚡ Protection Level",
+                description="Choose your server's protection intensity",
+                color=0x4ecdc4
             )
-            
-            for rule_type, config in rules.items():
-                rule_name = rule_type.replace('_', ' ').title()
-                action = config.get('action', 'Unknown').replace('_', ' ').title()
-                status = "✅ Active" if config.get('enabled') else "❌ Disabled"
-                
-                embed.add_field(
-                    name=rule_name,
-                    value=f"**Action:** {action}\n**Status:** {status}",
-                    inline=True
-                )
-            
-            await interaction.response.edit_message(embed=embed, view=self)
+            view = ProtectionLevelView(self.bot, self.guild)
+            await interaction.response.edit_message(embed=embed, view=view)
         
-        elif action == "logs":
+        elif value == "punishment":
             embed = discord.Embed(
-                title="📝 AntiNuke Security Incident Logs",
-                description="Recent security events and threat prevention activities monitored by the AntiNuke system.",
+                title="⚖️ Auto Punishment System",
+                description="Configure what happens to rule breakers",
+                color=0xe74c3c
+            )
+            view = PunishmentView(self.bot, self.guild)
+            await interaction.response.edit_message(embed=embed, view=view)
+
+class ToggleView(discord.ui.View):
+    def __init__(self, bot, guild):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild = guild
+    
+    @discord.ui.button(label="🟢 Enable AntiNuke", style=discord.ButtonStyle.success)
+    async def enable_antinuke(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.bot.db.set_antinuke_rule(self.guild.id, "enabled", {"status": True})
+        embed = discord.Embed(
+            title="✅ AntiNuke Enabled",
+            description="Your server is now protected by Dravon™ AntiNuke system!",
+            color=0x00ff00
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+    
+    @discord.ui.button(label="🔴 Disable AntiNuke", style=discord.ButtonStyle.danger)
+    async def disable_antinuke(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.guild.owner_id:
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="Only the server owner can disable AntiNuke protection!",
                 color=0xff0000
             )
-            embed.add_field(name="Recent Events", value="No security incidents detected in the last 24 hours.", inline=False)
-            embed.set_thumbnail(url=interaction.client.user.display_avatar.url)
-            
-            await interaction.response.edit_message(embed=embed, view=self)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
         
-        elif action == "whitelist":
-            embed = discord.Embed(
-                title="👥 AntiNuke Whitelist Management System",
-                description="Manage trusted users and roles who are exempt from AntiNuke protection measures. Use commands to add/remove whitelist entries.",
-                color=0x7289da
-            )
-            embed.add_field(name="Commands", value="`/antinuke whitelist add <user/role>`\n`/antinuke whitelist remove <user/role>`", inline=False)
-            
-            await interaction.response.edit_message(embed=embed, view=self)
+        await self.bot.db.set_antinuke_rule(self.guild.id, "enabled", {"status": False})
+        embed = discord.Embed(
+            title="⚠️ AntiNuke Disabled",
+            description="AntiNuke protection has been disabled. Your server is now vulnerable!",
+            color=0xff0000
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+
+class ProtectionLevelView(discord.ui.View):
+    def __init__(self, bot, guild):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild = guild
+    
+    @discord.ui.button(label="🟡 Basic Protection", style=discord.ButtonStyle.secondary)
+    async def basic_protection(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.bot.db.set_antinuke_rule(self.guild.id, "protection_level", {"level": "basic"})
+        embed = discord.Embed(
+            title="🟡 Basic Protection Enabled",
+            description="Standard protection against common threats",
+            color=0xffd700
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+    
+    @discord.ui.button(label="🟠 Strong Protection", style=discord.ButtonStyle.primary)
+    async def strong_protection(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.bot.db.set_antinuke_rule(self.guild.id, "protection_level", {"level": "strong"})
+        embed = discord.Embed(
+            title="🟠 Strong Protection Enabled",
+            description="Enhanced protection with faster response times",
+            color=0xff8c00
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+    
+    @discord.ui.button(label="🔴 Extreme Protection", style=discord.ButtonStyle.danger)
+    async def extreme_protection(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.bot.db.set_antinuke_rule(self.guild.id, "protection_level", {"level": "extreme"})
+        embed = discord.Embed(
+            title="🔴 Extreme Protection Enabled",
+            description="Maximum security with zero tolerance for threats",
+            color=0xff0000
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+
+class PunishmentView(discord.ui.View):
+    def __init__(self, bot, guild):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild = guild
+    
+    @discord.ui.select(
+        placeholder="⚖️ Choose punishment type...",
+        options=[
+            discord.SelectOption(label="🔒 Quarantine Role", description="Lock user in isolation (Recommended)", value="quarantine"),
+            discord.SelectOption(label="👢 Kick User", description="Remove user from server", value="kick"),
+            discord.SelectOption(label="🔨 Ban User", description="Permanently ban the user", value="ban"),
+            discord.SelectOption(label="📝 Remove All Roles", description="Strip all roles from user", value="strip_roles")
+        ]
+    )
+    async def punishment_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        punishment = select.values[0]
+        await self.bot.db.set_antinuke_rule(self.guild.id, "punishment", {"type": punishment})
         
-        elif action == "toggle":
-            embed = discord.Embed(
-                title="⚙️ AntiNuke System Status Management",
-                description="AntiNuke protection system has been toggled. All configured rules and protections are now active and monitoring your server for potential threats.",
-                color=0x00ff00
-            )
-            await interaction.response.edit_message(embed=embed, view=self)
+        punishment_names = {
+            "quarantine": "🔒 Quarantine Role",
+            "kick": "👢 Kick User",
+            "ban": "🔨 Ban User",
+            "strip_roles": "📝 Remove All Roles"
+        }
+        
+        embed = discord.Embed(
+            title="✅ Punishment Set",
+            description=f"Auto punishment set to: **{punishment_names[punishment]}**",
+            color=0x00ff00
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
 
 class AntiNuke(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.action_tracker = {}  # Track suspicious actions
+        self.lockdown_guilds = set()  # Guilds in emergency lockdown
+    
+    async def is_whitelisted(self, guild_id: int, user_id: int) -> bool:
+        """Check if user is whitelisted"""
+        whitelist = await self.bot.db.get_antinuke_rule(guild_id, "whitelist")
+        if not whitelist:
+            return False
+        return user_id in whitelist.get("users", [])
+    
+    async def get_quarantine_role(self, guild: discord.Guild):
+        """Get or create quarantine role"""
+        role = discord.utils.get(guild.roles, name="🔒 Dravon™ Quarantine")
+        if not role:
+            role = await guild.create_role(
+                name="🔒 Dravon™ Quarantine",
+                color=0x2c2c2c,
+                permissions=discord.Permissions.none(),
+                reason="AntiNuke Quarantine Role"
+            )
+            # Lock role in all channels
+            for channel in guild.channels:
+                try:
+                    await channel.set_permissions(role, send_messages=False, view_channel=False)
+                except:
+                    pass
+        return role
+    
+    async def execute_punishment(self, guild: discord.Guild, user: discord.Member, reason: str):
+        """Execute the configured punishment"""
+        punishment_config = await self.bot.db.get_antinuke_rule(guild.id, "punishment")
+        punishment_type = punishment_config.get("type", "quarantine") if punishment_config else "quarantine"
+        
+        try:
+            if punishment_type == "quarantine":
+                quarantine_role = await self.get_quarantine_role(guild)
+                await user.add_roles(quarantine_role, reason=f"AntiNuke: {reason}")
+            elif punishment_type == "kick":
+                await user.kick(reason=f"AntiNuke: {reason}")
+            elif punishment_type == "ban":
+                await user.ban(reason=f"AntiNuke: {reason}")
+            elif punishment_type == "strip_roles":
+                await user.edit(roles=[], reason=f"AntiNuke: {reason}")
+        except Exception as e:
+            print(f"AntiNuke punishment failed: {e}")
+    
+    async def log_action(self, guild: discord.Guild, action: str, user: discord.Member, details: str):
+        """Log security action"""
+        logs_config = await self.bot.db.get_antinuke_rule(guild.id, "logs")
+        if not logs_config:
+            return
+        
+        channel_id = logs_config.get("channel_id")
+        if not channel_id:
+            return
+        
+        channel = guild.get_channel(channel_id)
+        if not channel:
+            return
+        
+        embed = discord.Embed(
+            title="🚨 AntiNuke Alert",
+            description=f"**Action:** {action}\n**User:** {user.mention} ({user.id})\n**Details:** {details}",
+            color=0xff0000,
+            timestamp=datetime.now()
+        )
+        embed.set_thumbnail(url=user.display_avatar.url)
+        embed = add_dravon_footer(embed)
+        
+        try:
+            await channel.send(embed=embed)
+        except:
+            pass
     
     @commands.hybrid_group(name="antinuke")
     async def antinuke_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            if ctx.author.id != ctx.guild.owner_id:
-                extra_owners = await self.bot.db.get_extra_owners(ctx.guild.id)
-                if ctx.author.id not in extra_owners:
-                    await ctx.send("Only the server owner or extra owners can use AntiNuke commands.")
-                    return
-            
             embed = discord.Embed(
-                title="🛡️ Ultimate AntiNuke Setup v6.0",
-                description="**Secure your community with next-generation protection.**\n\nAntiNuke v6.0 is designed for speed, safety, and adaptability.\n\n🔒 **Fastest Detection** → Stops nukes in milliseconds.\n🧠 **Smart Learning** → Adjusts thresholds automatically.\n⚡ **Instant Recovery** → Auto-restores roles, channels, and settings.\n🛡️ **Zero Bypass** → Trusted whitelist system for owners & staff.\n\n**Protection Categories Available:**\n⚡ Role & Permission Protection\n🏗️ Channel & Server Protection\n👥 Member Protection\n🔒 General Safeguards\n\nUse the dropdown below to configure your server's ultimate protection!",
-                color=0xff0000
+                title="🛡️ Dravon™ AntiNuke v6.0",
+                description="**Advanced Server Protection System**\n\nProtect your server from malicious attacks with our state-of-the-art security system.",
+                color=0xff6b35
             )
-            
-            view = MainAntiNukeView()
-            await ctx.send(embed=embed, view=view)
+            embed.add_field(
+                name="🚀 Quick Commands",
+                value="`/antinuke setup` - Interactive setup wizard\n`/antinuke fastsetup` - Instant secure setup\n`/antinuke config` - View current settings",
+                inline=False
+            )
+            embed.add_field(
+                name="🔧 Management",
+                value="`/antinuke whitelist` - Manage trusted users\n`/antinuke punishment` - Configure punishments\n`/antinuke reset` - Reset all settings",
+                inline=False
+            )
+            embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413172497964339200/antinuke_banner.gif")
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
     
-    @antinuke_group.command(name="toggle")
-    async def antinuke_toggle(self, ctx):
-        if ctx.author.id != ctx.guild.owner_id:
-            extra_owners = await self.bot.db.get_extra_owners(ctx.guild.id)
-            if ctx.author.id not in extra_owners:
-                await ctx.send("Only the server owner or extra owners can use AntiNuke commands.")
-                return
-        
+    @antinuke_group.command(name="setup")
+    @commands.has_permissions(manage_guild=True)
+    async def antinuke_setup(self, ctx):
+        """Interactive AntiNuke setup wizard"""
         embed = discord.Embed(
-            title="⚙️ AntiNuke System Successfully Toggled",
-            description="AntiNuke protection system status has been changed. All configured security rules are now monitoring your server for potential threats and malicious activities.",
+            title="🛡️ AntiNuke Setup Wizard",
+            description="**Welcome to Dravon™ AntiNuke v6.0**\n\nUse the dropdown below to configure your server's protection settings.",
+            color=0x4ecdc4
+        )
+        embed.add_field(
+            name="🔧 Available Options",
+            value="• Enable/Disable System\n• Manage Whitelist\n• Set Protection Level\n• Configure Punishments\n• Setup Logging\n• Auto Alerts",
+            inline=False
+        )
+        embed = add_dravon_footer(embed)
+        
+        view = AntiNukeSetupView(self.bot, ctx.guild)
+        await ctx.send(embed=embed, view=view)
+    
+    @antinuke_group.command(name="fastsetup")
+    @commands.has_permissions(manage_guild=True)
+    async def antinuke_fastsetup(self, ctx):
+        """Instant secure AntiNuke setup"""
+        # Processing animation
+        embed = discord.Embed(
+            title="🚀 Fast Setup in Progress",
+            description="⏳ Setting up your server security...",
+            color=0xffd700
+        )
+        message = await ctx.send(embed=embed)
+        
+        steps = [
+            "🔧 Initializing AntiNuke system...",
+            "🛡️ Creating security roles...",
+            "📝 Setting up logging channel...",
+            "🔒 Configuring quarantine system...",
+            "⚡ Applying protection settings...",
+            "✅ Setup complete!"
+        ]
+        
+        for i, step in enumerate(steps):
+            progress = "█" * (i + 1) + "░" * (len(steps) - i - 1)
+            embed.description = f"{step}\n\n`{progress}` {int((i + 1) / len(steps) * 100)}%"
+            await message.edit(embed=embed)
+            await asyncio.sleep(1)
+        
+        # Actually configure the system
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "enabled", {"status": True})
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "protection_level", {"level": "strong"})
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "punishment", {"type": "quarantine"})
+        
+        # Create quarantine role
+        await self.get_quarantine_role(ctx.guild)
+        
+        # Create logs channel
+        try:
+            logs_channel = await ctx.guild.create_text_channel(
+                "🛡️-antinuke-logs",
+                reason="AntiNuke Fast Setup"
+            )
+            await self.bot.db.set_antinuke_rule(ctx.guild.id, "logs", {"channel_id": logs_channel.id})
+        except:
+            pass
+        
+        final_embed = discord.Embed(
+            title="🎉 Fast Setup Complete!",
+            description="**Your server is now protected by Dravon™ AntiNuke v6.0**",
             color=0x00ff00
         )
-        await ctx.send(embed=embed)
+        final_embed.add_field(
+            name="✅ Configured Features",
+            value="• AntiNuke System: **Enabled**\n• Protection Level: **Strong**\n• Punishment: **Quarantine Role**\n• Quarantine Role: **Created**\n• Logs Channel: **Created**",
+            inline=False
+        )
+        final_embed = add_dravon_footer(final_embed)
+        await message.edit(embed=final_embed)
     
-    @antinuke_group.command(name="status")
-    async def antinuke_status(self, ctx):
-        rules = await self.bot.db.get_all_antinuke_rules(ctx.guild.id)
+    @antinuke_group.group(name="punishment")
+    async def punishment_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(
+                title="⚖️ Punishment System",
+                description="Configure how AntiNuke handles rule breakers",
+                color=0xe74c3c
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+    
+    @punishment_group.command(name="set")
+    @commands.has_permissions(manage_guild=True)
+    async def punishment_set(self, ctx):
+        """Configure punishment type"""
+        embed = discord.Embed(
+            title="⚖️ Set Punishment Type",
+            description="Choose how to handle rule breakers",
+            color=0xe74c3c
+        )
+        view = PunishmentView(self.bot, ctx.guild)
+        await ctx.send(embed=embed, view=view)
+    
+    @punishment_group.command(name="view")
+    async def punishment_view(self, ctx):
+        """View current punishment settings"""
+        punishment_config = await self.bot.db.get_antinuke_rule(ctx.guild.id, "punishment")
+        punishment_type = punishment_config.get("type", "quarantine") if punishment_config else "quarantine"
+        
+        punishment_names = {
+            "quarantine": "🔒 Quarantine Role",
+            "kick": "👢 Kick User",
+            "ban": "🔨 Ban User",
+            "strip_roles": "📝 Remove All Roles"
+        }
         
         embed = discord.Embed(
-            title="📊 AntiNuke System Comprehensive Status Report",
-            description=f"**System Status:** ✅ Fully Operational\n**Active Rules:** {len(rules)}\n**Threats Neutralized Today:** 0\n**System Uptime:** 100%",
-            color=0x00ff00
+            title="⚖️ Current Punishment Settings",
+            description=f"**Active Punishment:** {punishment_names.get(punishment_type, 'Unknown')}",
+            color=0x7289da
         )
-        
-        await ctx.send(embed=embed)
-    
-    @antinuke_group.command(name="logs")
-    async def antinuke_logs(self, ctx):
-        embed = discord.Embed(
-            title="📝 AntiNuke Security Event Logs & Incident History",
-            description="Comprehensive log of all security events, threat detections, and protective actions taken by the AntiNuke system.",
-            color=0xff0000
-        )
-        embed.add_field(name="Recent Security Events", value="No malicious activities detected in the past 24 hours.", inline=False)
-        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-        
+        embed = add_dravon_footer(embed)
         await ctx.send(embed=embed)
     
     @antinuke_group.group(name="whitelist")
     async def whitelist_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send("Use `antinuke whitelist add <user/role>` or `antinuke whitelist remove <user/role>`")
+            embed = discord.Embed(
+                title="👥 Whitelist System",
+                description="Manage trusted users who bypass AntiNuke",
+                color=0x95a5a6
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
     
     @whitelist_group.command(name="add")
-    @app_commands.describe(target="User or role to add to whitelist")
-    async def whitelist_add(self, ctx, target: str):
-        if ctx.author.id != ctx.guild.owner_id:
-            await ctx.send("Only the server owner can manage the whitelist.")
-            return
+    @commands.has_permissions(manage_guild=True)
+    async def whitelist_add(self, ctx, user: discord.Member):
+        """Add user to whitelist"""
+        whitelist = await self.bot.db.get_antinuke_rule(ctx.guild.id, "whitelist")
+        if not whitelist:
+            whitelist = {"users": []}
+        
+        if user.id not in whitelist["users"]:
+            whitelist["users"].append(user.id)
+            await self.bot.db.set_antinuke_rule(ctx.guild.id, "whitelist", whitelist)
         
         embed = discord.Embed(
-            title="✅ AntiNuke Whitelist Entry Successfully Added",
-            description=f"**{target}** has been added to the AntiNuke whitelist and is now exempt from all protection measures and security restrictions.",
+            title="✅ User Whitelisted",
+            description=f"{user.mention} has been added to the whitelist",
             color=0x00ff00
         )
+        embed = add_dravon_footer(embed)
         await ctx.send(embed=embed)
     
     @whitelist_group.command(name="remove")
-    @app_commands.describe(target="User or role to remove from whitelist")
-    async def whitelist_remove(self, ctx, target: str):
-        if ctx.author.id != ctx.guild.owner_id:
-            await ctx.send("Only the server owner can manage the whitelist.")
-            return
+    @commands.has_permissions(manage_guild=True)
+    async def whitelist_remove(self, ctx, user: discord.Member):
+        """Remove user from whitelist"""
+        whitelist = await self.bot.db.get_antinuke_rule(ctx.guild.id, "whitelist")
+        if whitelist and user.id in whitelist.get("users", []):
+            whitelist["users"].remove(user.id)
+            await self.bot.db.set_antinuke_rule(ctx.guild.id, "whitelist", whitelist)
         
         embed = discord.Embed(
-            title="🗑️ AntiNuke Whitelist Entry Successfully Removed",
-            description=f"**{target}** has been removed from the AntiNuke whitelist and is now subject to all configured protection measures.",
-            color=0xff0000
+            title="✅ User Removed",
+            description=f"{user.mention} has been removed from the whitelist",
+            color=0x00ff00
         )
+        embed = add_dravon_footer(embed)
+        await ctx.send(embed=embed)
+    
+    @antinuke_group.command(name="config")
+    async def antinuke_config(self, ctx):
+        """View AntiNuke configuration"""
+        enabled = await self.bot.db.get_antinuke_rule(ctx.guild.id, "enabled")
+        level = await self.bot.db.get_antinuke_rule(ctx.guild.id, "protection_level")
+        punishment = await self.bot.db.get_antinuke_rule(ctx.guild.id, "punishment")
+        whitelist = await self.bot.db.get_antinuke_rule(ctx.guild.id, "whitelist")
+        
+        status = "🟢 Enabled" if enabled and enabled.get("status") else "🔴 Disabled"
+        protection_level = level.get("level", "basic").title() if level else "Basic"
+        punishment_type = punishment.get("type", "quarantine").replace("_", " ").title() if punishment else "Quarantine"
+        whitelist_count = len(whitelist.get("users", [])) if whitelist else 0
+        
+        embed = discord.Embed(
+            title="🛡️ AntiNuke Configuration",
+            description="Current server protection settings",
+            color=0x4ecdc4
+        )
+        embed.add_field(name="Status", value=status, inline=True)
+        embed.add_field(name="Protection Level", value=protection_level, inline=True)
+        embed.add_field(name="Punishment", value=punishment_type, inline=True)
+        embed.add_field(name="Whitelisted Users", value=str(whitelist_count), inline=True)
+        embed = add_dravon_footer(embed)
         await ctx.send(embed=embed)
     
     @antinuke_group.command(name="reset")
+    @commands.has_permissions(administrator=True)
     async def antinuke_reset(self, ctx):
+        """Reset all AntiNuke settings"""
         if ctx.author.id != ctx.guild.owner_id:
-            extra_owners = await self.bot.db.get_extra_owners(ctx.guild.id)
-            if ctx.author.id not in extra_owners:
-                await ctx.send("Only the server owner or extra owners can use AntiNuke commands.")
-                return
-        
-        embed = discord.Embed(
-            title="🔄 AntiNuke System Complete Reset Successfully Executed",
-            description="All AntiNuke protection rules, configurations, and settings have been reset to default values. Please reconfigure your security preferences.",
-            color=0xff0000
-        )
-        await ctx.send(embed=embed)
-    
-    @antinuke_group.command(name="test")
-    async def antinuke_test(self, ctx):
-        if ctx.author.id != ctx.guild.owner_id:
-            extra_owners = await self.bot.db.get_extra_owners(ctx.guild.id)
-            if ctx.author.id not in extra_owners:
-                await ctx.send("Only the server owner or extra owners can use AntiNuke commands.")
-                return
-        
-        embed = discord.Embed(
-            title="🧪 AntiNuke System Security Test Successfully Completed",
-            description="Safe simulation test has been executed to verify all protection mechanisms are functioning correctly. All systems are operational and ready to defend your server.",
-            color=0x00ff00
-        )
-        await ctx.send(embed=embed)
-    
-    @commands.hybrid_group(name="extraowner")
-    async def extraowner_group(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Use `extraowner add <user>` or `extraowner list`")
-    
-    @extraowner_group.command(name="add")
-    @app_commands.describe(user="User to add as extra owner")
-    async def add_extra_owner(self, ctx, user: discord.Member):
-        if ctx.author.id != ctx.guild.owner_id:
-            await ctx.send("Only the server owner can add extra owners.")
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="Only the server owner can reset AntiNuke settings!",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
             return
         
-        await self.bot.db.add_extra_owner(ctx.guild.id, user.id)
+        # Reset all settings
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "enabled", {"status": False})
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "protection_level", {"level": "basic"})
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "punishment", {"type": "quarantine"})
+        await self.bot.db.set_antinuke_rule(ctx.guild.id, "whitelist", {"users": []})
         
         embed = discord.Embed(
-            title="✅ Extra Owner Successfully Added to AntiNuke System",
-            description=f"**{user.display_name}** has been granted extra owner privileges and can now configure AntiNuke settings and manage the system.",
+            title="✅ AntiNuke Reset",
+            description="All AntiNuke settings have been reset to default",
             color=0x00ff00
         )
-        await ctx.send(embed=embed)
-    
-    @extraowner_group.command(name="list")
-    async def list_extra_owners(self, ctx):
-        if ctx.author.id != ctx.guild.owner_id:
-            extra_owners = await self.bot.db.get_extra_owners(ctx.guild.id)
-            if ctx.author.id not in extra_owners:
-                await ctx.send("Only the server owner or extra owners can view this list.")
-                return
-        
-        extra_owners = await self.bot.db.get_extra_owners(ctx.guild.id)
-        
-        if not extra_owners:
-            embed = discord.Embed(
-                title="📋 AntiNuke Extra Owners List",
-                description="No extra owners have been added to the AntiNuke system.",
-                color=0x7289da
-            )
-        else:
-            owner_mentions = []
-            for owner_id in extra_owners:
-                user = ctx.guild.get_member(owner_id)
-                if user:
-                    owner_mentions.append(user.mention)
-            
-            embed = discord.Embed(
-                title="📋 AntiNuke Extra Owners List",
-                description=f"**Extra Owners ({len(extra_owners)}):**\n" + "\n".join(owner_mentions),
-                color=0x7289da
-            )
-        
+        embed = add_dravon_footer(embed)
         await ctx.send(embed=embed)
 
 async def setup(bot):

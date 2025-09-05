@@ -103,95 +103,45 @@ class DravonBot(commands.Bot):
         if botadmin_cog and botadmin_cog.is_blacklisted(message.author.id):
             return
         
-        # Check for premium no-prefix commands
-        if message.guild:
+        # Premium no-prefix system - ONLY for premium users
+        if message.guild and not message.content.startswith(('>', '/', '<@')):
             premium_cog = self.get_cog('Premium')
             if premium_cog and await premium_cog.is_premium(message.author.id):
-                # Always check for no-prefix commands for premium users
+                # Only premium users can use commands without prefix
                 ctx = await self.get_context(message)
-                if not ctx.valid and not message.content.startswith(await self.get_prefix(message)):
+                if not ctx.valid:
                     content_lower = message.content.lower().strip()
                     first_word = content_lower.split()[0] if content_lower.split() else ''
                     
-                    # Get all available commands dynamically
+                    # Get all command names (case-insensitive)
                     all_command_names = set()
                     
-                    # Get all command names from bot's command registry
+                    # Get commands from bot registry
                     for command in self.all_commands.values():
                         all_command_names.add(command.name.lower())
-                        # Also add original case for exact matching
-                        all_command_names.add(command.name)
                         if hasattr(command, 'aliases') and command.aliases:
                             all_command_names.update([alias.lower() for alias in command.aliases])
-                            all_command_names.update(command.aliases)
                     
-                    # Get commands from all loaded cogs (including hybrid commands)
-                    for cog_name, cog in self.cogs.items():
+                    # Get commands from all cogs
+                    for cog in self.cogs.values():
                         for command in cog.get_commands():
                             all_command_names.add(command.name.lower())
-                            all_command_names.add(command.name)
                             if hasattr(command, 'aliases') and command.aliases:
                                 all_command_names.update([alias.lower() for alias in command.aliases])
-                                all_command_names.update(command.aliases)
                     
-                    # Add comprehensive static command list for safety
+                    # Static command list for reliability
                     static_commands = {
-                        # Help & Info
                         'help', 'mhelp', 'h', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
-                        'ping', 'support', 'partnership', 'docs', 'documentation',
-                        # Music (all variations)
-                        'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue', 'q', 'volume', 'vol',
-                        'shuffle', 'repeat', 'nowplaying', 'np', 'join', 'leave', 'disconnect', 'clear',
-                        # Moderation
-                        'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge',
-                        'timeout', 'untimeout', 'slowmode', 'lock', 'unlock',
-                        # Setup & Config
-                        'ticket', 'embed', 'boost', 'welcome', 'automod', 'antinuke', 'giveaway',
-                        'logs', 'autorole', 'prefix', 'autoresponder', 'autorule',
-                        # Premium & Features
-                        'premium', 'teams', 'team', 'levelup', 'level', 'levels', 'rank', 'leaderboard',
-                        'afk', 'whitelist', 'stats', 'nodestatus',
-                        # Fun Commands (all case variations)
-                        'kiss', 'slap', 'kill', 'Kiss', 'Slap', 'Kill', 'KISS', 'SLAP', 'KILL'
+                        'ping', 'support', 'partnership', 'docs', 'play', 'p', 'skip', 'stop', 
+                        'pause', 'resume', 'queue', 'q', 'volume', 'ban', 'kick', 'mute', 'warn',
+                        'ticket', 'embed', 'premium', 'kiss', 'slap', 'kill', 'afk', 'level'
                     }
                     all_command_names.update(static_commands)
                     
-                    # Check if first word matches any command (case insensitive and exact)
-                    original_first_word = message.content.split()[0] if message.content.split() else ''
-                    if first_word in all_command_names or original_first_word in all_command_names:
-                        # Preserve original case but add prefix
+                    # Check if first word is a command (case-insensitive)
+                    if first_word in all_command_names:
                         prefix = await self.get_prefix(message)
                         message.content = f"{prefix}{message.content}"
-                    
-                    # Handle common misspellings
-                    misspelling_map = {
-                        'partership': 'partnership',
-                        'parnership': 'partnership',
-                        'partneship': 'partnership',
-                        'plya': 'play',
-                        'palsy': 'play',
-                        'skipt': 'skip',
-                        'hlep': 'help',
-                        'mhlep': 'mhelp',
-                        'kil': 'kill',
-                        'kis': 'kiss',
-                        'kiss': 'kiss',
-                        'slaap': 'slap',
-                        'kyll': 'kill'
-                    }
-                    
-                    if first_word in misspelling_map:
-                        parts = message.content.split()
-                        # Replace first word with correct spelling, preserve case style
-                        original_case = parts[0]
-                        corrected = misspelling_map[first_word]
-                        if original_case.isupper():
-                            corrected = corrected.upper()
-                        elif original_case.istitle():
-                            corrected = corrected.title()
-                        parts[0] = corrected
-                        prefix = await self.get_prefix(message)
-                        message.content = f"{prefix}{' '.join(parts)}"
         
         # Process emoji placeholders in message content
         if message.content:
