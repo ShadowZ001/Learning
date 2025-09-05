@@ -607,6 +607,66 @@ class Ticket(commands.Cog):
         await ctx.send(embed=embed)
         await asyncio.sleep(5)
         await ctx.channel.delete()
+    
+    @ticket_group.command(name="reset")
+    @commands.has_permissions(manage_guild=True)
+    async def ticket_reset(self, ctx):
+        """Reset all ticket configuration to start fresh"""
+        embed = discord.Embed(
+            title="⚠️ Reset Ticket Configuration",
+            description="Are you sure you want to reset all ticket settings?\n\n**This will remove:**\n• Panel title and description\n• All ticket categories\n• Color and image settings\n• Footer text\n• Category channels\n\n**This action cannot be undone!**",
+            color=0xff0000
+        )
+        
+        view = discord.ui.View(timeout=60)
+        
+        confirm_button = discord.ui.Button(
+            label="✅ Yes, Reset All",
+            style=discord.ButtonStyle.danger
+        )
+        
+        cancel_button = discord.ui.Button(
+            label="❌ Cancel",
+            style=discord.ButtonStyle.secondary
+        )
+        
+        async def confirm_callback(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message("Only the command user can confirm this action.", ephemeral=True)
+                return
+            
+            # Reset all ticket configuration
+            await self.bot.db.reset_ticket_config(ctx.guild.id)
+            
+            success_embed = discord.Embed(
+                title="✅ Ticket Configuration Reset",
+                description="All ticket settings have been reset successfully.\n\nYou can now use `/ticket setup` to configure your ticket system from scratch.",
+                color=0x00ff00
+            )
+            success_embed = add_dravon_footer(success_embed)
+            await interaction.response.edit_message(embed=success_embed, view=None)
+        
+        async def cancel_callback(interaction):
+            if interaction.user != ctx.author:
+                await interaction.response.send_message("Only the command user can cancel this action.", ephemeral=True)
+                return
+            
+            cancel_embed = discord.Embed(
+                title="❌ Reset Cancelled",
+                description="Ticket configuration reset has been cancelled. Your settings remain unchanged.",
+                color=0x7289da
+            )
+            cancel_embed = add_dravon_footer(cancel_embed)
+            await interaction.response.edit_message(embed=cancel_embed, view=None)
+        
+        confirm_button.callback = confirm_callback
+        cancel_button.callback = cancel_callback
+        
+        view.add_item(confirm_button)
+        view.add_item(cancel_button)
+        
+        embed = add_dravon_footer(embed)
+        await ctx.send(embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(Ticket(bot))

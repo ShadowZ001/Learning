@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlazeNode - Asia's No. 1 Game Hosting Solution</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="brand">BlazeNode</h1>
+            <p class="subtitle">Asia's No. 1 Game Hosting Solution</p>
+        </header>
+
+        <!-- Feature Cards -->
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h3>High Performance</h3>
+                <p>Powered by enterprise-grade hardware for optimal gaming experience.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>DDoS Protection</h3>
+                <p>Advanced protection against DDoS attacks and threats.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h3>Instant Setup</h3>
+                <p>Deploy your free server in our one-click installer within 60 seconds.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <h3>Full Control</h3>
+                <p>Complete control to your server with full-panel access.</p>
+            </div>
+        </section>
+
+        <!-- Login Section -->
+        <section class="login-section">
+            <div class="login-card">
+                <h2>Sign in to your account</h2>
+                <p class="login-subtitle">Access your game servers and manage your resources</p>
+                
+                <button class="discord-btn" onclick="loginWithDiscord()">
+                    <i class="fab fa-discord"></i>
+                    Login with Discord
+                </button>
+                
+                <p class="trusted-text">Trusted by 7,933 users</p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-links">
+                <a href="#" class="footer-link">Terms of Service</a>
+                <span class="separator">•</span>
+                <a href="#" class="footer-link">Privacy Policy</a>
+            </div>
+            <p class="copyright">© 2025 BlazeNode. All rights reserved.</p>
+            <p class="powered-by">Powered by HyperX v2.1.73 | Designed, developed and built by BlazeNode</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Handle OAuth2 errors
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        if (error) {
+            let errorMessage = 'Authentication failed. Please try again.';
+            if (error === 'no_code') {
+                errorMessage = 'Authorization was cancelled. Please try logging in again.';
+            } else if (error === 'auth_failed') {
+                errorMessage = 'Discord authentication failed. Please check your connection and try again.';
+            }
+            
+            // Show error message
+            const loginCard = document.querySelector('.login-card');
+            if (loginCard) {
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;';
+                errorDiv.textContent = errorMessage;
+                loginCard.insertBefore(errorDiv, loginCard.firstChild.nextSibling.nextSibling);
+            }
+            
+            // Clear error from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    </script>
+</body>
+</html>

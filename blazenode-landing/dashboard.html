@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperX Dashboard - Home</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>HyperX</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </li>
+                <li class="menu-item">
+                    <i class="fas fa-server"></i>
+                    <span>Servers</span>
+                </li>
+                <li class="menu-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </li>
+                <li class="menu-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </li>
+                <li class="menu-item">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Billing</span>
+                </li>
+                <li class="menu-item">
+                    <i class="fas fa-life-ring"></i>
+                    <span>Support</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="welcome-section">
+                    <h1>Welcome back, <span id="username">dev_shadowz</span> 👋</h1>
+                    <p>Manage your servers, account and other features from your dashboard.</p>
+                </div>
+                <div class="user-profile">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">Logout</button>
+                </div>
+            </header>
+
+            <!-- Daily Reward Card -->
+            <div class="daily-reward-card">
+                <div class="reward-info">
+                    <span class="reward-text">Daily reward available – Claim 25 coins • Streak 1 day</span>
+                </div>
+                <button class="claim-btn">Claim now →</button>
+            </div>
+
+            <!-- Resources Grid -->
+            <section class="resources-section">
+                <div class="resources-grid">
+                    <div class="resource-card">
+                        <div class="resource-header">
+                            <span class="resource-title">Memory</span>
+                            <span class="resource-value">0GB / 6GB</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="resource-percentage">0% utilized</span>
+                    </div>
+
+                    <div class="resource-card">
+                        <div class="resource-header">
+                            <span class="resource-title">CPU</span>
+                            <span class="resource-value">0% / 200%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="resource-percentage">0% utilized</span>
+                    </div>
+
+                    <div class="resource-card">
+                        <div class="resource-header">
+                            <span class="resource-title">Storage</span>
+                            <span class="resource-value">0GB / 15GB</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="resource-percentage">0% utilized</span>
+                    </div>
+
+                    <div class="resource-card">
+                        <div class="resource-header">
+                            <span class="resource-title">Servers</span>
+                            <span class="resource-value">0 / 4</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="resource-percentage">0% utilized</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Extra Stats -->
+            <section class="extra-stats">
+                <div class="stat-card">
+                    <span class="stat-number">0</span>
+                    <span class="stat-label">server(s)</span>
+                </div>
+                <div class="stat-card">
+                    <div class="server-status">
+                        <span class="status-dot online"></span>
+                        <span>0 online</span>
+                        <span class="separator">•</span>
+                        <span class="status-dot offline"></span>
+                        <span>0 offline</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- My Servers Section -->
+            <section class="servers-section">
+                <h2>My servers</h2>
+                <div class="servers-list" id="serversList">
+                    <!-- Servers will be populated via API -->
+                    <div class="no-servers">
+                        <p>No servers found. Create your first server to get started!</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function logout() {
+            fetch('/api/logout', {
+                method: 'POST',
+                credentials: 'include'
+            }).then(() => {
+                window.location.href = '/';
+            }).catch(() => {
+                window.location.href = '/';
+            });
+        }
+    </script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
