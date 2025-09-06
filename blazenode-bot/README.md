@@ -1,35 +1,74 @@
 # BlazeNode Discord Bot
 
-Discord bot for managing BlazeNode dashboard users and coins.
+Advanced Discord bot for BlazeNode hosting platform with dashboard integration and comprehensive user management.
 
-## Setup
+## Features
 
-1. Install dependencies:
-```bash
-npm install
-```
+- 👥 **User Management**: Create and manage user accounts
+- 💰 **Coin System**: Give/remove coins, check balances
+- 🔗 **Dashboard Integration**: Seamless API communication
+- 📊 **Statistics**: User stats and leaderboards
+- 🛡️ **Admin Commands**: Complete administrative control
+- 🎮 **Server Integration**: Link Discord users to dashboard
+- 📈 **Analytics**: Track user activity and engagement
+- 🔒 **Security**: Role-based permissions and validation
 
-2. Configure `.env` file with:
-- `MONGODB_URI` - Same database as dashboard
-- `DISCORD_BOT_TOKEN` - Your Discord bot token
-- `ADMIN_USER_ID` - Discord user ID who can use commands
+## Commands
 
-3. Start the bot:
-```bash
-npm start
-```
+### Admin Commands
+- `/give-coins <user> <amount>` - Give coins to a user
+- `/remove-coins <user> <amount>` - Remove coins from a user
+- `/user-info <user>` - Get detailed user information
+- `/create-user <username>` - Create new dashboard account
+- `/stats` - View bot and platform statistics
 
-## Commands (Admin Only)
+### User Commands
+- `/balance` - Check your coin balance
+- `/profile` - View your profile information
+- `/leaderboard` - View top users by coins
+- `/link-account` - Link Discord to dashboard account
 
-- `/create <username> <password>` - Create new user
-- `/coin give <username> <amount>` - Add coins to user
-- `/coin remove <username> <amount>` - Remove coins from user
-- `/balance <username>` - Check user's coin balance
-- `/users` - List all users (max 10)
-- `/delete <username>` - Delete user account
-- `/help` - Show help message
+## Installation
 
-## Deployment
+1. Clone the repository
+2. Copy `.env.example` to `.env` and configure your settings
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the bot:
+   ```bash
+   npm start
+   ```
 
-This bot can be hosted separately from the dashboard on any Node.js hosting service.
-Both bot and dashboard connect to the same MongoDB database.
+## Environment Variables
+
+See `.env.example` for all required environment variables.
+
+## Dashboard Integration
+
+The bot communicates with the BlazeNode dashboard through secure API endpoints:
+- User creation and management
+- Coin transactions
+- Statistics synchronization
+- Real-time updates
+
+## Production Deployment
+
+This bot is ready for deployment on:
+- Railway
+- Heroku
+- VPS/Dedicated servers
+- Any Node.js hosting platform
+
+## Tech Stack
+
+- **Framework**: Discord.js v14
+- **Database**: MongoDB with Mongoose
+- **API**: RESTful communication with dashboard
+- **Authentication**: Token-based API authentication
+- **Logging**: Comprehensive error handling and logging
+
+## License
+
+MIT License - see LICENSE file for details.

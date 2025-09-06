@@ -1,12 +1,29 @@
 {
   "name": "blazenode-bot",
-  "version": "1.0.0",
-  "description": "BlazeNode Discord Bot for User Management",
+  "version": "2.0.0",
+  "description": "Advanced BlazeNode Discord Bot with Dashboard Integration and User Management",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "dev": "nodemon bot.js"
+    "dev": "nodemon bot.js",
+    "build": "echo 'No build step required for Node.js bot'",
+    "test": "echo 'Tests not implemented yet'"
   },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "blazenode",
+    "dashboard-integration",
+    "user-management",
+    "gaming",
+    "hosting"
+  ],
+  "author": "BlazeNode Team",
+  "license": "MIT",
   "dependencies": {
     "discord.js": "^14.14.1",
     "mongoose": "^7.6.0",

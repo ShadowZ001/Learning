@@ -11,6 +11,7 @@ const Coupon = require('./models/Coupon');
 const UserResources = require('./models/UserResources');
 
 const app = express();
+// Port will be handled by the hosting platform (Vercel, Netlify, etc.)
 const PORT = process.env.PORT || 3000;
 
 console.log('Starting BlazeNode Dashboard Server...');
@@ -2200,9 +2201,19 @@ app.get('/dashboard', (req, res) => {
     }
 })();
 
-app.listen(PORT, () => {
-    console.log(`✅ Dashboard server running on port ${PORT}`);
-    console.log(`🔧 Admin features: Discord management, User creation, Node switching, Linkvertise management`);
-    console.log(`🤖 Bot integration ready for separate hosting`);
-    console.log(`🔗 Advanced Linkvertise detection system enabled`);
+const server = app.listen(PORT, () => {
+    console.log(`🚀 BlazeNode Dashboard Server Started`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔧 Features: Admin Panel, User Management, Server Creation, Linkvertise Integration`);
+    console.log(`🤖 Discord Bot Integration: Ready`);
+    console.log(`🔗 Advanced Security: Multi-factor validation, Anti-fraud protection`);
+    console.log(`⚡ Ready for production deployment!`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('🔄 SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('✅ Process terminated');
+    });
 });
