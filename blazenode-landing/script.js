@@ -1,100 +1,302 @@
-// Discord login functionality
-function loginWithDiscord() {
-    // Check if already logged in
-    fetch('/api/user', { credentials: 'include' })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = '/dashboard.html';
-            } else {
-                window.location.href = '/login';
-            }
-        })
-        .catch(() => {
-            window.location.href = '/login';
-        });
-}
-
-// Add smooth scrolling and animations
+// Initialize animations when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Animate feature cards on scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+    // Initialize AOS-like animations
+    initAnimations();
+    
+    // Add smooth scrolling
+    document.documentElement.style.scrollBehavior = 'smooth';
+    
+    // Add loading states to form
+    const form = document.getElementById('loginForm');
+    const loginBtn = form.querySelector('.login-btn');
+    
+    // Add focus effects to inputs
+    const inputs = form.querySelectorAll('input');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            if (!this.value) {
+                this.parentElement.classList.remove('focused');
             }
         });
-    }, observerOptions);
-
-    // Observe feature cards
-    const featureCards = document.querySelectorAll('.feature-card');
-    featureCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        card.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
-        observer.observe(card);
     });
-
-    // Observe login card
-    const loginCard = document.querySelector('.login-card');
-    if (loginCard) {
-        loginCard.style.opacity = '0';
-        loginCard.style.transform = 'translateY(30px)';
-        loginCard.style.transition = 'opacity 0.6s ease 0.4s, transform 0.6s ease 0.4s';
-        observer.observe(loginCard);
-    }
-
-    // Add particle effect to background (optional enhancement)
-    createParticles();
 });
 
-// Optional: Create subtle particle effect
-function createParticles() {
-    const particleCount = 50;
-    const particles = [];
+// Initialize animations
+function initAnimations() {
+    const animatedElements = document.querySelectorAll('[data-aos]');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.classList.add('aos-animate');
+                }, parseInt(entry.target.dataset.aosDelay) || 0);
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    });
+    
+    animatedElements.forEach(el => {
+        observer.observe(el);
+    });
+}
 
-    for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.cssText = `
-            position: fixed;
-            width: 2px;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.1);
+// Handle login form submission
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const loginBtn = form.querySelector('.login-btn');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const username = form.username.value.trim();
+    const password = form.password.value.trim();
+    
+    // Validation
+    if (!username || !password) {
+        showNotification('Please fill in all fields', 'error');
+        return;
+    }
+    
+    // Show loading state
+    loginBtn.classList.add('loading');
+    loginBtn.disabled = true;
+    
+    try {
+        console.log('🔐 Attempting login for:', username);
+        
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+        
+        console.log('Login response status:', response.status);
+        const data = await response.json();
+        console.log('Login response data:', data);
+        
+        if (response.ok && data.success) {
+            // Show success animation
+            showNotification('Login successful! Redirecting...', 'success');
+            
+            // Show loading overlay
+            loadingOverlay.classList.add('active');
+            
+            // Redirect after animation
+            setTimeout(() => {
+                window.location.href = '/dashboard.html';
+            }, 1500);
+        } else {
+            // Show error
+            showNotification(data.error || 'Login failed', 'error');
+            
+            // Add shake animation to form
+            form.classList.add('shake');
+            setTimeout(() => form.classList.remove('shake'), 500);
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showNotification('Connection error. Please try again.', 'error');
+        
+        // Add shake animation to form
+        form.classList.add('shake');
+        setTimeout(() => form.classList.remove('shake'), 500);
+    } finally {
+        // Remove loading state
+        loginBtn.classList.remove('loading');
+        loginBtn.disabled = false;
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    // Set styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 12px;
+        color: white;
+        font-weight: 500;
+        font-size: 14px;
+        z-index: 10000;
+        max-width: 400px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+        transform: translateX(100%);
+    `;
+    
+    // Set background based on type
+    if (type === 'success') {
+        notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        notification.innerHTML = `<i class="fas fa-check-circle" style="margin-right: 8px;"></i>${message}`;
+    } else if (type === 'error') {
+        notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        notification.innerHTML = `<i class="fas fa-exclamation-circle" style="margin-right: 8px;"></i>${message}`;
+    } else {
+        notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+        notification.innerHTML = `<i class="fas fa-info-circle" style="margin-right: 8px;"></i>${message}`;
+    }
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Remove after delay
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .shake {
+        animation: shake 0.5s ease-in-out;
+    }
+    
+    .form-group.focused label {
+        color: #ff6b35;
+    }
+    
+    .form-group.focused input {
+        border-color: #ff6b35;
+        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+    
+    /* Smooth transitions for all interactive elements */
+    * {
+        transition: all 0.3s ease;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #f7931e, #ff6b35);
+    }
+`;
+document.head.appendChild(style);
+
+// Add some interactive effects
+document.addEventListener('mousemove', function(e) {
+    // Subtle parallax effect for particles
+    const particles = document.querySelectorAll('.particle');
+    const mouseX = e.clientX / window.innerWidth;
+    const mouseY = e.clientY / window.innerHeight;
+    
+    particles.forEach((particle, index) => {
+        const speed = (index + 1) * 0.5;
+        const x = (mouseX - 0.5) * speed;
+        const y = (mouseY - 0.5) * speed;
+        
+        particle.style.transform = `translate(${x}px, ${y}px)`;
+    });
+});
+
+// Add click ripple effect to buttons
+document.addEventListener('click', function(e) {
+    if (e.target.matches('.login-btn, .feature-card')) {
+        const ripple = document.createElement('span');
+        const rect = e.target.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.3);
             border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out;
             pointer-events: none;
-            z-index: -1;
         `;
         
-        document.body.appendChild(particle);
-        particles.push({
-            element: particle,
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.5
-        });
+        e.target.style.position = 'relative';
+        e.target.style.overflow = 'hidden';
+        e.target.appendChild(ripple);
+        
+        setTimeout(() => ripple.remove(), 600);
     }
+});
 
-    function animateParticles() {
-        particles.forEach(particle => {
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-
-            if (particle.x < 0 || particle.x > window.innerWidth) particle.vx *= -1;
-            if (particle.y < 0 || particle.y > window.innerHeight) particle.vy *= -1;
-
-            particle.element.style.left = particle.x + 'px';
-            particle.element.style.top = particle.y + 'px';
-        });
-
-        requestAnimationFrame(animateParticles);
+// Add ripple animation
+const rippleStyle = document.createElement('style');
+rippleStyle.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(2);
+            opacity: 0;
+        }
     }
-
-    animateParticles();
-}
+`;
+document.head.appendChild(rippleStyle);

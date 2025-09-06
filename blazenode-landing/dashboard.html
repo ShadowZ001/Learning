@@ -3,161 +3,1057 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HyperX Dashboard - Home</title>
+    <title>BlazeNode Dashboard - Home</title>
     <link rel="stylesheet" href="dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Linkvertise Script -->
+    <script src="https://publisher.linkvertise.com/cdn/linkvertise.js"></script>
+    <script>linkvertise(1393912, {whitelist: [], blacklist: [""]});</script>
 </head>
 <body>
     <div class="dashboard-container">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+        
         <!-- Sidebar -->
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2>HyperX</h2>
+                <h2>BlazeNode</h2>
             </div>
             <ul class="sidebar-menu">
-                <li class="menu-item active">
+                <li class="menu-item active" data-page="home">
                     <i class="fas fa-home"></i>
                     <span>Home</span>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item" data-page="servers">
                     <i class="fas fa-server"></i>
                     <span>Servers</span>
                 </li>
-                <li class="menu-item">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Analytics</span>
+                <li class="menu-item" data-page="store">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Store</span>
                 </li>
-                <li class="menu-item">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
+                <li class="menu-item" data-page="afk">
+                    <i class="fas fa-clock"></i>
+                    <span>AFK Earn</span>
                 </li>
-                <li class="menu-item">
-                    <i class="fas fa-credit-card"></i>
-                    <span>Billing</span>
+                <li class="menu-item" data-page="earn">
+                    <i class="fas fa-coins"></i>
+                    <span>Earn Coins</span>
                 </li>
-                <li class="menu-item">
-                    <i class="fas fa-life-ring"></i>
-                    <span>Support</span>
+                <li class="menu-item" data-page="promotion">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Promotion</span>
+                </li>
+                <li class="menu-item" data-page="leaderboard">
+                    <i class="fas fa-trophy"></i>
+                    <span>Leaderboard</span>
+                </li>
+                <li class="menu-item admin-only" data-page="admin" style="display: none;">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Admin</span>
+                </li>
+                <li class="menu-item" data-page="profile">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Profile</span>
                 </li>
             </ul>
         </nav>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
-            <header class="dashboard-header">
-                <div class="welcome-section">
-                    <h1>Welcome back, <span id="username">dev_shadowz</span> 👋</h1>
-                    <p>Manage your servers, account and other features from your dashboard.</p>
-                </div>
-                <div class="user-profile">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user"></i>
+            <!-- Home Page -->
+            <div id="home-page" class="page active">
+                <!-- Header -->
+                <header class="dashboard-header">
+                    <div class="welcome-section">
+                        <h1>Welcome back, <span id="username">Loading...</span> 👋</h1>
+                        <p>Manage your servers, account and other features from your dashboard.</p>
                     </div>
-                    <button class="logout-btn" onclick="logout()" style="margin-left: 15px; padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">Logout</button>
-                </div>
-            </header>
+                    <div class="user-profile">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <button class="logout-btn" onclick="logout()">Logout</button>
+                    </div>
+                </header>
 
-            <!-- Daily Reward Card -->
-            <div class="daily-reward-card">
-                <div class="reward-info">
-                    <span class="reward-text">Daily reward available – Claim 25 coins • Streak 1 day</span>
+                <!-- Daily Reward Card -->
+                <div class="daily-reward-card">
+                    <div class="reward-info">
+                        <span class="reward-text">Daily reward available – Claim 25 coins • Streak <span id="streak">1</span> day</span>
+                    </div>
+                    <button class="claim-btn" id="claimBtn">Claim now →</button>
                 </div>
-                <button class="claim-btn">Claim now →</button>
+
+                <!-- Resources Grid -->
+                <section class="resources-section">
+                    <div class="resources-grid">
+                        <div class="resource-card">
+                            <div class="resource-header">
+                                <span class="resource-title">Memory</span>
+                                <span class="resource-value" id="memory-usage">0MB / 0MB</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="memory-progress" style="width: 0%"></div>
+                            </div>
+                            <span class="resource-percentage" id="memory-percent">0% utilized</span>
+                        </div>
+
+                        <div class="resource-card">
+                            <div class="resource-header">
+                                <span class="resource-title">CPU</span>
+                                <span class="resource-value" id="cpu-usage">0% / 0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cpu-progress" style="width: 0%"></div>
+                            </div>
+                            <span class="resource-percentage" id="cpu-percent">0% utilized</span>
+                        </div>
+
+                        <div class="resource-card">
+                            <div class="resource-header">
+                                <span class="resource-title">Storage</span>
+                                <span class="resource-value" id="storage-usage">0MB / 0MB</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="storage-progress" style="width: 0%"></div>
+                            </div>
+                            <span class="resource-percentage" id="storage-percent">0% utilized</span>
+                        </div>
+
+                        <div class="resource-card">
+                            <div class="resource-header">
+                                <span class="resource-title">Servers</span>
+                                <span class="resource-value" id="servers-count">0 / 2</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="servers-progress" style="width: 0%"></div>
+                            </div>
+                            <span class="resource-percentage" id="servers-percent">0% utilized</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Extra Stats -->
+                <section class="extra-stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="total-servers">0</span>
+                        <span class="stat-label">server(s)</span>
+                    </div>
+                    <div class="stat-card">
+                        <div class="server-status">
+                            <span class="status-dot online"></span>
+                            <span id="online-count">0 online</span>
+                            <span class="separator">•</span>
+                            <span class="status-dot offline"></span>
+                            <span id="offline-count">0 offline</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- My Servers Section -->
+                <section class="servers-section">
+                    <h2>My servers</h2>
+                    <div class="servers-list" id="serversList">
+                        <div class="loading">Loading servers...</div>
+                    </div>
+                </section>
             </div>
 
-            <!-- Resources Grid -->
-            <section class="resources-section">
-                <div class="resources-grid">
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <span class="resource-title">Memory</span>
-                            <span class="resource-value">0GB / 6GB</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                        <span class="resource-percentage">0% utilized</span>
-                    </div>
-
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <span class="resource-title">CPU</span>
-                            <span class="resource-value">0% / 200%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                        <span class="resource-percentage">0% utilized</span>
-                    </div>
-
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <span class="resource-title">Storage</span>
-                            <span class="resource-value">0GB / 15GB</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                        <span class="resource-percentage">0% utilized</span>
-                    </div>
-
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <span class="resource-title">Servers</span>
-                            <span class="resource-value">0 / 4</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                        <span class="resource-percentage">0% utilized</span>
+            <!-- Servers Page -->
+            <div id="servers-page" class="page">
+                <div class="page-header">
+                    <h1>Servers</h1>
+                    <button class="new-server-btn" id="createServerBtn">
+                        <i class="fas fa-plus"></i>
+                        New Server
+                    </button>
+                </div>
+                
+                <!-- Mobile View -->
+                <div class="servers-mobile-view">
+                    <div class="servers-grid" id="serversGrid">
+                        <div class="loading">Loading servers...</div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Extra Stats -->
-            <section class="extra-stats">
-                <div class="stat-card">
-                    <span class="stat-number">0</span>
-                    <span class="stat-label">server(s)</span>
-                </div>
-                <div class="stat-card">
-                    <div class="server-status">
-                        <span class="status-dot online"></span>
-                        <span>0 online</span>
-                        <span class="separator">•</span>
-                        <span class="status-dot offline"></span>
-                        <span>0 offline</span>
+                
+                <!-- Desktop View -->
+                <div class="servers-desktop-view">
+                    <div class="servers-table-container">
+                        <table class="servers-table">
+                            <thead>
+                                <tr>
+                                    <th>Server Name</th>
+                                    <th>Status</th>
+                                    <th>Memory</th>
+                                    <th>CPU</th>
+                                    <th>Disk</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="serversTableBody">
+                                <tr>
+                                    <td colspan="6" class="loading-row">Loading servers...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </section>
-
-            <!-- My Servers Section -->
-            <section class="servers-section">
-                <h2>My servers</h2>
-                <div class="servers-list" id="serversList">
-                    <!-- Servers will be populated via API -->
-                    <div class="no-servers">
-                        <p>No servers found. Create your first server to get started!</p>
+            </div>
+            
+            <!-- Server Edit Modal -->
+            <div id="serverEditModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-edit"></i> Edit Server Resources</h3>
+                        <button class="modal-close" onclick="closeServerEditModal()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="server-edit-info">
+                            <h4 id="editServerName">Server Name</h4>
+                            <p id="editServerID">Server ID</p>
+                        </div>
+                        
+                        <div class="resource-editors">
+                            <!-- RAM Editor -->
+                            <div class="resource-editor">
+                                <div class="resource-header">
+                                    <label><i class="fas fa-memory"></i> Memory (RAM)</label>
+                                    <span class="resource-value" id="ramValue">1024 MB</span>
+                                </div>
+                                <div class="resource-controls">
+                                    <button class="resource-btn decrease" onclick="adjustResource('ram', -256)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <div class="resource-bar">
+                                        <div class="resource-fill" id="ramFill" style="width: 50%"></div>
+                                        <div class="resource-markers">
+                                            <span class="marker" style="left: 25%">512MB</span>
+                                            <span class="marker" style="left: 50%">1GB</span>
+                                            <span class="marker" style="left: 75%">1.5GB</span>
+                                        </div>
+                                    </div>
+                                    <button class="resource-btn increase" onclick="adjustResource('ram', 256)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="resource-info">
+                                    <span class="min-value">512MB</span>
+                                    <span class="max-value">2GB</span>
+                                </div>
+                            </div>
+                            
+                            <!-- CPU Editor -->
+                            <div class="resource-editor">
+                                <div class="resource-header">
+                                    <label><i class="fas fa-microchip"></i> CPU Limit</label>
+                                    <span class="resource-value" id="cpuValue">50%</span>
+                                </div>
+                                <div class="resource-controls">
+                                    <button class="resource-btn decrease" onclick="adjustResource('cpu', -25)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <div class="resource-bar">
+                                        <div class="resource-fill" id="cpuFill" style="width: 50%"></div>
+                                        <div class="resource-markers">
+                                            <span class="marker" style="left: 25%">25%</span>
+                                            <span class="marker" style="left: 50%">50%</span>
+                                            <span class="marker" style="left: 75%">75%</span>
+                                        </div>
+                                    </div>
+                                    <button class="resource-btn increase" onclick="adjustResource('cpu', 25)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="resource-info">
+                                    <span class="min-value">25%</span>
+                                    <span class="max-value">100%</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Disk Editor -->
+                            <div class="resource-editor">
+                                <div class="resource-header">
+                                    <label><i class="fas fa-hdd"></i> Disk Space</label>
+                                    <span class="resource-value" id="diskValue">2048 MB</span>
+                                </div>
+                                <div class="resource-controls">
+                                    <button class="resource-btn decrease" onclick="adjustResource('disk', -512)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <div class="resource-bar">
+                                        <div class="resource-fill" id="diskFill" style="width: 40%"></div>
+                                        <div class="resource-markers">
+                                            <span class="marker" style="left: 20%">1GB</span>
+                                            <span class="marker" style="left: 40%">2GB</span>
+                                            <span class="marker" style="left: 60%">3GB</span>
+                                            <span class="marker" style="left: 80%">4GB</span>
+                                        </div>
+                                    </div>
+                                    <button class="resource-btn increase" onclick="adjustResource('disk', 512)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="resource-info">
+                                    <span class="min-value">1GB</span>
+                                    <span class="max-value">5GB</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="edit-actions">
+                            <button class="btn-secondary" onclick="closeServerEditModal()">Cancel</button>
+                            <button class="btn-primary" onclick="saveServerChanges()">Save Changes</button>
+                        </div>
                     </div>
                 </div>
-            </section>
+            </div>
+
+            <!-- Create Server Step 1 -->
+            <div id="create-server-step1" class="page">
+                <div class="create-server-container">
+                    <div class="create-server-header">
+                        <h2>Create Server - Basics</h2>
+                        <div class="step-indicator">
+                            <span class="step active">1</span>
+                            <span class="step">2</span>
+                        </div>
+                    </div>
+                    <div class="create-server-form">
+                        <div class="form-group">
+                            <label for="serverName">Server Name</label>
+                            <input type="text" id="serverName" placeholder="Enter server name" required>
+                            <small>Choose a unique name for your server</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="serverNest">Server Nest</label>
+                            <select id="serverNest" required>
+                                <option value="">Select nest</option>
+                            </select>
+                            <small>Choose the server category</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="serverEgg">Server Type</label>
+                            <select id="serverEgg" required>
+                                <option value="">Select nest first...</option>
+                            </select>
+                            <small>Choose the server software type</small>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="backToServersBtn">← Back to Servers</button>
+                        <button type="button" class="btn-primary" id="nextStepBtn">Next Step →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Server Step 2 -->
+            <div id="create-server-step2" class="page">
+                <div class="create-server-container">
+                    <div class="create-server-header">
+                        <h2>Create Server - Resources</h2>
+                        <div class="step-indicator">
+                            <span class="step completed">1</span>
+                            <span class="step active">2</span>
+                        </div>
+                    </div>
+                    <div class="create-server-form">
+                        <div class="resource-info">
+                            <h3>Resource Allocation</h3>
+                            <p>Configure your server resources within your account limits.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="serverRam">Memory (RAM)</label>
+                            <input type="number" id="serverRam" min="512" max="2048" value="1024" required>
+                            <small>Memory in MB (512MB - 2048MB available)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="serverCpu">CPU Limit</label>
+                            <input type="number" id="serverCpu" min="25" max="100" value="50" required>
+                            <small>CPU percentage (25% - 100% available)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="serverDisk">Disk Space</label>
+                            <input type="number" id="serverDisk" min="1024" max="5120" value="2048" required>
+                            <small>Disk space in MB (1024MB - 5120MB available)</small>
+                        </div>
+                        <div id="validation-message" class="validation-message"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="prevStepBtn">← Previous Step</button>
+                        <button type="button" class="btn-primary" id="createServerFinalBtn">Create Server</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AFK Earn Page -->
+            <div id="afk-page" class="page">
+                <div class="page-header">
+                    <h1><i class="fas fa-clock"></i> AFK Coin Earning</h1>
+                    <div class="afk-status">
+                        <span class="status-indicator" id="afkStatus">Inactive</span>
+                        <span class="coins-earned" id="coinsEarned">0 coins earned</span>
+                    </div>
+                </div>
+                
+                <div class="afk-content">
+                    <!-- AFK Control Panel -->
+                    <div class="afk-panel">
+                        <div class="afk-info">
+                            <h3>💰 Earn Coins While Away</h3>
+                            <p>Stay on this page and earn <strong>1.2 coins every 60 seconds</strong> automatically!</p>
+                            <div class="afk-stats">
+                                <div class="stat-box">
+                                    <span class="stat-number" id="afkTimer">60</span>
+                                    <span class="stat-label">Seconds Left</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-number" id="sessionEarnings">0</span>
+                                    <span class="stat-label">Session Coins</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-number" id="afkStreak">0</span>
+                                    <span class="stat-label">Streak</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="afk-controls">
+                            <button id="startAfkBtn" class="btn-primary afk-btn">
+                                <i class="fas fa-play"></i>
+                                Start AFK Earning
+                            </button>
+                            <button id="stopAfkBtn" class="btn-secondary afk-btn" style="display: none;">
+                                <i class="fas fa-stop"></i>
+                                Stop AFK
+                            </button>
+                        </div>
+                        
+                        <div class="afk-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="afkProgress" style="width: 0%"></div>
+                            </div>
+                            <span class="progress-text" id="progressText">Click Start to begin earning</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Ping Pong Game -->
+                    <div class="game-panel">
+                        <div class="game-header">
+                            <h3>🏓 Ping Pong Game</h3>
+                            <p>Play while earning coins to stay entertained!</p>
+                            <div class="game-score">
+                                <span>Score: <span id="gameScore">0</span></span>
+                                <span>High Score: <span id="highScore">0</span></span>
+                            </div>
+                        </div>
+                        
+                        <div class="game-container">
+                            <canvas id="pongCanvas" width="600" height="300"></canvas>
+                            <div class="game-controls">
+                                <button id="startGameBtn" class="btn-primary game-btn">
+                                    <i class="fas fa-gamepad"></i>
+                                    Start Game
+                                </button>
+                                <button id="pauseGameBtn" class="btn-secondary game-btn" style="display: none;">
+                                    <i class="fas fa-pause"></i>
+                                    Pause
+                                </button>
+                                <button id="resetGameBtn" class="btn-warning game-btn" style="display: none;">
+                                    <i class="fas fa-redo"></i>
+                                    Reset
+                                </button>
+                            </div>
+                            <div class="game-mobile-controls">
+                                <button id="moveUpBtn" class="mobile-control-btn">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button id="moveDownBtn" class="mobile-control-btn">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div class="game-instructions">
+                                <p><strong>Controls:</strong> Use ↑ and ↓ arrow keys or W/S keys to move your paddle</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Earn Coins Page -->
+            <div id="earn-page" class="page">
+                <div class="page-header">
+                    <h1><i class="fas fa-coins"></i> Earn Coins</h1>
+                    <div class="earn-info">
+                        <span class="info-text">Complete tasks and earn BlazeCoins!</span>
+                    </div>
+                </div>
+                
+                <div class="earn-content">
+                    <!-- Linkvertise Earning -->
+                    <div class="earn-method">
+                        <div class="earn-card linkvertise-card">
+                            <div class="earn-header">
+                                <div class="earn-icon">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="earn-title">
+                                    <h3>💰 Linkvertise Rewards</h3>
+                                    <p>Complete short tasks and earn coins instantly!</p>
+                                </div>
+                            </div>
+                            
+                            <div class="earn-details">
+                                <div class="reward-info">
+                                    <div class="reward-item">
+                                        <span class="reward-label">Reward per completion:</span>
+                                        <span class="reward-value">8 coins</span>
+                                    </div>
+                                    <div class="reward-item">
+                                        <span class="reward-label">Completion time:</span>
+                                        <span class="reward-value">1 minute</span>
+                                    </div>
+                                    <div class="reward-item">
+                                        <span class="reward-label">Daily limit:</span>
+                                        <span class="reward-value">No limit</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="earn-actions">
+                                    <button class="btn-primary linkvertise-btn" onclick="openLinkvertise()">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        Start Earning
+                                    </button>
+                                    <div class="earn-note">
+                                        <small>⚡ Coins are added automatically after completion</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Other Earning Methods -->
+                    <div class="earn-methods-grid">
+                        <div class="earn-method-card">
+                            <div class="method-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h4>AFK Earning</h4>
+                            <p>Earn 1.2 coins every 60 seconds while staying active</p>
+                            <button class="btn-secondary" onclick="dashboard.showPage('afk')">
+                                Go to AFK
+                            </button>
+                        </div>
+                        
+                        <div class="earn-method-card">
+                            <div class="method-icon">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                            <h4>Daily Rewards</h4>
+                            <p>Claim 25 coins every day and build your streak</p>
+                            <button class="btn-secondary" onclick="dashboard.showPage('home')">
+                                Claim Daily
+                            </button>
+                        </div>
+                        
+                        <div class="earn-method-card">
+                            <div class="method-icon">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <h4>Coupon Codes</h4>
+                            <p>Redeem special codes for bonus coins</p>
+                            <button class="btn-secondary" onclick="dashboard.showPage('profile')">
+                                Redeem Code
+                            </button>
+                        </div>
+                        
+                        <div class="earn-method-card">
+                            <div class="method-icon">
+                                <i class="fab fa-discord"></i>
+                            </div>
+                            <h4>Discord Community</h4>
+                            <p>Join events and giveaways in our Discord server</p>
+                            <button class="btn-secondary" onclick="joinDiscord()">
+                                Join Discord
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Earning Stats -->
+                    <div class="earning-stats">
+                        <div class="stats-header">
+                            <h3>📊 Your Earning Stats</h3>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-number" id="totalEarned">0</div>
+                                <div class="stat-label">Total Earned</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number" id="todayEarned">0</div>
+                                <div class="stat-label">Today's Earnings</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number" id="linkvertiseCompleted">0</div>
+                                <div class="stat-label">Tasks Completed</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number" id="currentBalance">0</div>
+                                <div class="stat-label">Current Balance</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Promotion Page -->
+            <div id="promotion-page" class="page">
+                <div class="page-header">
+                    <h1><i class="fas fa-bullhorn"></i> Server Promotion</h1>
+                    <div class="promotion-info">
+                        <span class="info-text">Promote your server for 500 coins • Boost for 100 coins</span>
+                    </div>
+                </div>
+                
+                <div class="promotion-content">
+                    <!-- Create Promotion -->
+                    <div class="create-promotion">
+                        <div class="promotion-card">
+                            <h3>📢 Promote Your Server</h3>
+                            <p>Share your server with the BlazeNode community and attract new players!</p>
+                            
+                            <form id="promotionForm">
+                                <div class="form-group">
+                                    <label for="serverName">Server Name</label>
+                                    <input type="text" id="promoServerName" placeholder="Enter your server name" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="serverIP">Server IP</label>
+                                    <input type="text" id="promoServerIP" placeholder="e.g., play.yourserver.com:25565" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="serverDescription">Server Description</label>
+                                    <textarea id="promoServerDescription" placeholder="Describe your server, game modes, features..." rows="4" required></textarea>
+                                </div>
+                                
+                                <div class="promotion-cost">
+                                    <div class="cost-info">
+                                        <i class="fas fa-coins"></i>
+                                        <span>Cost: 500 BlazeCoins</span>
+                                    </div>
+                                    <button type="submit" class="btn-primary promotion-btn">
+                                        <i class="fas fa-bullhorn"></i>
+                                        Publish Promotion (500 coins)
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Promotions List -->
+                    <div class="promotions-list">
+                        <div class="promotions-header">
+                            <h3>🌟 Featured Servers</h3>
+                            <div class="promotions-filter">
+                                <button class="filter-btn active" data-filter="all">All</button>
+                                <button class="filter-btn" data-filter="boosted">Boosted</button>
+                                <button class="filter-btn" data-filter="recent">Recent</button>
+                            </div>
+                        </div>
+                        
+                        <div class="promotions-grid" id="promotionsGrid">
+                            <div class="loading">Loading promotions...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Store Page -->
+            <div id="store-page" class="page">
+                <div class="page-header">
+                    <h1><i class="fas fa-shopping-cart"></i> Store</h1>
+                </div>
+                <div class="store-tabs">
+                    <button class="tab-btn active" onclick="showTab('resources')">Resources</button>
+                    <button class="tab-btn" onclick="showTab('slots')">Server Slots</button>
+                    <button class="tab-btn" onclick="showTab('coins')">Buy Coins</button>
+                </div>
+                <div class="store-content">
+                    <!-- Resources Tab -->
+                    <div id="resources-tab" class="tab-content active">
+                        <div class="store-grid">
+                            <div class="store-item">
+                                <div class="item-icon"><i class="fas fa-memory"></i></div>
+                                <div class="item-name">1GB RAM</div>
+                                <div class="item-price">700 Coins</div>
+                                <button class="btn-primary" onclick="buyResource('ram', 1024, 700)">Buy</button>
+                            </div>
+                            <div class="store-item">
+                                <div class="item-icon"><i class="fas fa-microchip"></i></div>
+                                <div class="item-name">50% CPU</div>
+                                <div class="item-price">500 Coins</div>
+                                <button class="btn-primary" onclick="buyResource('cpu', 50, 500)">Buy</button>
+                            </div>
+                            <div class="store-item">
+                                <div class="item-icon"><i class="fas fa-hdd"></i></div>
+                                <div class="item-name">3GB Disk</div>
+                                <div class="item-price">400 Coins</div>
+                                <button class="btn-primary" onclick="buyResource('disk', 3072, 400)">Buy</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Server Slots Tab -->
+                    <div id="slots-tab" class="tab-content">
+                        <div class="store-grid">
+                            <div class="store-item">
+                                <div class="item-icon"><i class="fas fa-server"></i></div>
+                                <div class="item-name">1 Server Slot</div>
+                                <div class="item-price">300 Coins</div>
+                                <button class="btn-primary" onclick="buySlot(1, 300)">Buy</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Buy Coins Tab -->
+                    <div id="coins-tab" class="tab-content">
+                        <div class="coins-section">
+                            <div class="coins-message">
+                                <h3>💰 Get More BlazeCoins!</h3>
+                                <p>Join our Discord community to get free coins, participate in giveaways, and stay updated with the latest news!</p>
+                                <p>You can also earn coins by:</p>
+                                <ul>
+                                    <li>🎯 Daily login rewards (25 coins/day)</li>
+                                    <li>🎫 Redeeming special coupon codes</li>
+                                    <li>🎉 Participating in community events</li>
+                                    <li>💬 Being active in our Discord server</li>
+                                </ul>
+                            </div>
+                            <div class="store-grid">
+                                <div class="store-item discord-item">
+                                    <div class="item-icon"><i class="fab fa-discord"></i></div>
+                                    <div class="item-name">Join Discord Server</div>
+                                    <div class="item-price">Free Coins & Events</div>
+                                    <button class="btn-primary discord-btn" onclick="joinDiscord()">Join Discord</button>
+                                </div>
+                                <div class="store-item">
+                                    <div class="item-icon"><i class="fas fa-coins"></i></div>
+                                    <div class="item-name">Payment System</div>
+                                    <div class="item-price">Coming Soon</div>
+                                    <button class="btn-secondary" disabled>Soon</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Page -->
+            <div id="leaderboard-page" class="page">
+                <div class="page-header">
+                    <h1>🏆 Leaderboard</h1>
+                </div>
+                <div class="leaderboard-content">
+                    <div class="leaderboard-card">
+                        <h3>Top 10 Users by BlazeCoins</h3>
+                        <div class="leaderboard-list" id="leaderboardList">
+                            <div class="loading">Loading leaderboard...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Page (Hidden) -->
+            <div id="admin-page" class="page">
+                <div class="page-header">
+                    <h1>🔧 Admin Panel</h1>
+                </div>
+                <div class="admin-content">
+                    <!-- Admin Tabs -->
+                    <div class="admin-tabs">
+                        <button class="admin-tab-btn active" onclick="showAdminTab('users')">👥 Users</button>
+                        <button class="admin-tab-btn" onclick="showAdminTab('coins')">💰 Coins</button>
+                        <button class="admin-tab-btn" onclick="showAdminTab('store')">🛍️ Store</button>
+                        <button class="admin-tab-btn" onclick="showAdminTab('system')">🖥️ System</button>
+                    </div>
+                    
+                    <!-- Users Tab -->
+                    <div id="users-admin-tab" class="admin-tab-content active">
+                        <div class="admin-card">
+                            <h3>👥 Users Management</h3>
+                            <div class="users-grid" id="usersGrid">
+                                <div class="loading">Loading users...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Coins Tab -->
+                    <div id="coins-admin-tab" class="admin-tab-content">
+                        <div class="admin-card">
+                            <h3>💰 Give Coins</h3>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="adminUsername">Username</label>
+                                    <input type="text" id="adminUsername" placeholder="Enter username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="adminCoins">Coins Amount</label>
+                                    <input type="number" id="adminCoins" placeholder="Enter coins amount">
+                                </div>
+                                <button class="btn-primary" onclick="giveCoins()">Give Coins</button>
+                            </div>
+                        </div>
+                        
+                        <div class="admin-card">
+                            <h3>💸 Remove Coins</h3>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="removeUsername">Username</label>
+                                    <input type="text" id="removeUsername" placeholder="Enter username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="removeCoins">Coins Amount</label>
+                                    <input type="number" id="removeCoins" placeholder="Enter coins amount to remove">
+                                </div>
+                                <button class="btn-danger" onclick="removeCoins()">Remove Coins</button>
+                            </div>
+                        </div>
+                        
+                        <div class="admin-card">
+                            <h3>👤 Create User</h3>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="createUsername">Username</label>
+                                    <input type="text" id="createUsername" placeholder="Enter username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="createPassword">Password</label>
+                                    <input type="password" id="createPassword" placeholder="Enter password">
+                                </div>
+                                <button class="btn-primary" onclick="createUser()">Create User</button>
+                            </div>
+                        </div>
+                        
+                        <div class="admin-card">
+                            <h3>🎫 Create Coupon</h3>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="couponCodeInput">Coupon Code</label>
+                                    <input type="text" id="couponCodeInput" placeholder="Enter coupon code" style="text-transform: uppercase;">
+                                </div>
+                                <div class="form-group">
+                                    <label for="couponAmount">Coins Amount</label>
+                                    <input type="number" id="couponAmount" placeholder="Coins to give on redeem">
+                                </div>
+                                <div class="form-group">
+                                    <label for="couponLimit">Redeem Limit</label>
+                                    <input type="number" id="couponLimit" placeholder="How many people can redeem">
+                                </div>
+                                <button class="btn-primary" onclick="createCoupon()">Create Coupon</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Store Tab -->
+                    <div id="store-admin-tab" class="admin-tab-content">
+                    
+                    <!-- Edit Store Section -->
+                    <div class="admin-card">
+                        <h3>🛍️ Edit Store</h3>
+                        <div class="store-admin-grid">
+                            <div class="store-admin-item">
+                                <h4>RAM (1GB)</h4>
+                                <input type="number" id="ramPrice" placeholder="Price in coins" value="700">
+                                <button class="btn-small btn-edit" onclick="updatePrice('ram', 'ramPrice')">Update</button>
+                            </div>
+                            <div class="store-admin-item">
+                                <h4>CPU (50%)</h4>
+                                <input type="number" id="cpuPrice" placeholder="Price in coins" value="500">
+                                <button class="btn-small btn-edit" onclick="updatePrice('cpu', 'cpuPrice')">Update</button>
+                            </div>
+                            <div class="store-admin-item">
+                                <h4>Disk (3GB)</h4>
+                                <input type="number" id="diskPrice" placeholder="Price in coins" value="400">
+                                <button class="btn-small btn-edit" onclick="updatePrice('disk', 'diskPrice')">Update</button>
+                            </div>
+                            <div class="store-admin-item">
+                                <h4>Server Slot</h4>
+                                <input type="number" id="slotPrice" placeholder="Price in coins" value="300">
+                                <button class="btn-small btn-edit" onclick="updatePrice('slot', 'slotPrice')">Update</button>
+                            </div>
+                        </div>
+                    </div>
+                        <div class="admin-card">
+                            <h3>💬 Discord Management</h3>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="discordLink">Discord Invite Link</label>
+                                    <input type="url" id="discordLink" placeholder="https://discord.gg/..." value="https://discord.gg/GwXUfVjnTm">
+                                </div>
+                                <button class="btn-primary" onclick="updateDiscordLink()">Update Discord Link</button>
+                            </div>
+                        </div>
+                        
+                        <div class="admin-card">
+                            <h3>🔗 Linkvertise Management</h3>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="linkvertiseUrl">Linkvertise URL</label>
+                                    <input type="url" id="linkvertiseUrl" placeholder="https://dash.blazenode.site" value="https://dash.blazenode.site">
+                                    <small>This link will be used for coin earning through Linkvertise</small>
+                                </div>
+                                <button class="btn-primary" onclick="updateLinkvertiseUrl()">Update Linkvertise URL</button>
+                            </div>
+                            <div class="linkvertise-info">
+                                <h4>Current Settings:</h4>
+                                <p><strong>URL:</strong> <span id="currentLinkvertiseUrl">https://dash.blazenode.site</span></p>
+                                <p><strong>Status:</strong> <span id="linkvertiseStatus" class="status-active">Active</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- System Tab -->
+                    <div id="system-admin-tab" class="admin-tab-content">
+                        <div class="admin-card">
+                            <h3>🖥️ Node Management</h3>
+                            <div class="node-info">
+                                <div class="current-node">
+                                    <h4>Current Active Node: <span id="currentNode">Loading...</span></h4>
+                                    <p>Server Count: <span id="nodeServerCount">Loading...</span></p>
+                                </div>
+                            </div>
+                            <div class="admin-form">
+                                <div class="form-group">
+                                    <label for="nodeSelect">Switch to Node</label>
+                                    <select id="nodeSelect">
+                                        <option value="">Loading nodes...</option>
+                                    </select>
+                                </div>
+                                <div class="node-actions">
+                                    <button class="btn-primary" onclick="switchToNode()">Switch Node</button>
+                                    <button class="btn-secondary" onclick="refreshNodes()">Refresh Nodes</button>
+                                    <button class="btn-warning" onclick="checkNodeStatus()">Check Status</button>
+                                </div>
+                            </div>
+                            <div class="node-settings">
+                                <div class="form-group">
+                                    <label for="serverLimit">Auto-Switch Server Limit</label>
+                                    <input type="number" id="serverLimit" value="600" min="1" max="1000">
+                                    <small>Automatically switch to next node when this limit is reached</small>
+                                </div>
+                                <button class="btn-secondary" onclick="updateServerLimit()">Update Limit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page">
+                <div class="page-header">
+                    <h1>Profile</h1>
+                </div>
+                <div class="profile-content">
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar-large">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="profile-info">
+                                <h2 id="profile-username">Loading...</h2>
+                                <p id="profile-email">Loading...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">BlazeCoins</span>
+                                <span class="stat-value" id="profile-coins">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Servers</span>
+                                <span class="stat-value" id="profile-servers">0/2</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Member Since</span>
+                                <span class="stat-value" id="profile-joined">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pterodactyl-card">
+                        <div class="card-header">
+                            <h3>Pterodactyl Panel Access</h3>
+                            <span class="status-badge online" id="pterodactyl-status">Active</span>
+                        </div>
+                        <div class="pterodactyl-details">
+                            <div class="detail-item">
+                                <label>Panel URL:</label>
+                                <div class="detail-value">
+                                    <a href="https://panel.blazenode.site" target="_blank">https://panel.blazenode.site</a>
+                                    <button class="copy-btn" onclick="copyToClipboard('https://panel.blazenode.site')">📋</button>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <label>Username:</label>
+                                <div class="detail-value">
+                                    <span id="pterodactyl-username">Loading...</span>
+                                    <button class="copy-btn" onclick="copyPterodactylUsername()">📋</button>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <label>Email:</label>
+                                <div class="detail-value">
+                                    <span id="pterodactyl-email">Loading...</span>
+                                    <button class="copy-btn" onclick="copyPterodactylEmail()">📋</button>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <label>Password:</label>
+                                <div class="detail-value">
+                                    <span id="pterodactyl-password" class="password-hidden">••••••••</span>
+                                    <button class="toggle-btn" onclick="togglePassword()">👁️</button>
+                                    <button class="copy-btn" onclick="copyPterodactylPassword()">📋</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pterodactyl-note">
+                            <p><strong>Note:</strong> Use these credentials to access your Pterodactyl panel and manage your servers directly.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Redeem Coupon Section -->
+                    <div class="coupon-card">
+                        <div class="card-header">
+                            <h3>🎫 Redeem Coupon</h3>
+                        </div>
+                        <div class="coupon-form">
+                            <div class="form-group">
+                                <label for="couponCode">Coupon Code</label>
+                                <input type="text" id="couponCode" placeholder="Enter coupon code" style="text-transform: uppercase;">
+                            </div>
+                            <button class="btn-primary" onclick="redeemCoupon()">Redeem Coupon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
         </main>
     </div>
 
-    <script>
-        function logout() {
-            fetch('/api/logout', {
-                method: 'POST',
-                credentials: 'include'
-            }).then(() => {
-                window.location.href = '/';
-            }).catch(() => {
-                window.location.href = '/';
-            });
-        }
-    </script>
     <script src="dashboard.js"></script>
 </body>
 </html>

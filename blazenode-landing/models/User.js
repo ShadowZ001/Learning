@@ -1,33 +1,30 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    discordId: {
+    username: {
         type: String,
         required: true,
         unique: true
     },
-    username: {
+    password: {
         type: String,
         required: true
-    },
-    discriminator: {
-        type: String,
-        default: '0'
-    },
-    email: {
-        type: String,
-        required: true
-    },
-    avatar: {
-        type: String
     },
     coins: {
         type: Number,
         default: 100
     },
-    joinedServer: {
-        type: Boolean,
-        default: false
+    pterodactylUserId: {
+        type: Number
+    },
+    discordId: {
+        type: String,
+        default: null,
+        sparse: true
+    },
+    serverCount: {
+        type: Number,
+        default: 0
     },
     lastLogin: {
         type: Date,
@@ -39,6 +36,10 @@ const userSchema = new mongoose.Schema({
     },
     lastDailyReward: {
         type: Date
+    },
+    createdBy: {
+        type: String,
+        default: 'web'
     }
 }, {
     timestamps: true
