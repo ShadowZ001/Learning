@@ -18,8 +18,11 @@ console.log('Starting BlazeNode Dashboard Server...');
 mongoose.connect(config.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    bufferCommands: false,
+    bufferMaxEntries: 0
 })
 .then(() => {
     console.log('✅ Dashboard connected to MongoDB');
@@ -28,7 +31,11 @@ mongoose.connect(config.MONGODB_URI, {
 })
 .catch(err => {
     console.error('❌ Dashboard MongoDB connection error:', err.message);
-    process.exit(1);
+    console.error('❌ Full error:', err);
+    // Don't exit in production, let it retry
+    if (config.NODE_ENV !== 'production') {
+        process.exit(1);
+    }
 });
 
 // MongoDB connection events
@@ -70,10 +77,17 @@ pterodactylAPI.get('/nests')
 
 // Middleware with proper CORS
 app.use(cors({
-    origin: true,
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, etc.)
+        if (!origin) return callback(null, true);
+        
+        // Allow all origins in development/production
+        return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Set-Cookie']
 }));
 
 // Handle preflight requests
@@ -97,15 +111,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('.'));
 app.use(session({
     secret: config.SESSION_SECRET,
-    resave: true,
-    saveUninitialized: true,
-    name: 'connect.sid',
+    resave: false,
+    saveUninitialized: false,
+    name: 'blazenode.sid',
     cookie: { 
         secure: false,
         httpOnly: false,
         maxAge: 24 * 60 * 60 * 1000,
         sameSite: 'lax'
-    }
+    },
+    rolling: true
 }));
 
 // Create Pterodactyl user with proper format
@@ -220,8 +235,15 @@ app.post('/api/login', async (req, res) => {
     console.log('\n=== LOGIN ATTEMPT ===');
     console.log('Username:', username);
     console.log('Password:', password);
+    console.log('MongoDB state:', mongoose.connection.readyState);
 
     try {
+        // Check database connection first
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ Database not connected during login');
+            return res.status(503).json({ error: 'Database connection error. Please try again.' });
+        }
+
         // Validate input
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
@@ -236,9 +258,11 @@ app.post('/api/login', async (req, res) => {
         console.log('User found:', user ? 'YES' : 'NO');
         
         if (!user) {
-            // Debug: show available users
-            const allUsers = await User.find({}).select('username password');
-            console.log('Available users:', allUsers.map(u => `${u.username}:${u.password}`));
+            // Debug: show available users (only in development)
+            if (config.NODE_ENV !== 'production') {
+                const allUsers = await User.find({}).select('username password');
+                console.log('Available users:', allUsers.map(u => `${u.username}:${u.password}`));
+            }
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
@@ -285,7 +309,14 @@ app.post('/api/login', async (req, res) => {
         
     } catch (error) {
         console.error('LOGIN ERROR:', error.message);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Full error:', error);
+        
+        // Provide more specific error messages
+        if (error.name === 'MongooseError' || error.name === 'MongoError') {
+            res.status(503).json({ error: 'Database connection error. Please try again.' });
+        } else {
+            res.status(500).json({ error: 'Server error: ' + error.message });
+        }
     }
 });
 
@@ -294,6 +325,13 @@ app.get('/api/user', async (req, res) => {
     console.log('\n=== GET USER REQUEST ===');
     console.log('Session exists:', !!req.session);
     console.log('Session user:', req.session?.user?.username);
+    console.log('MongoDB state:', mongoose.connection.readyState);
+    
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+        console.log('❌ Database not connected');
+        return res.status(503).json({ error: 'Database connection error' });
+    }
     
     if (!req.session || !req.session.user) {
         console.log('No user in session - not authenticated');
@@ -327,7 +365,7 @@ app.get('/api/user', async (req, res) => {
         
     } catch (error) {
         console.error('Get user error:', error);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Database error: ' + error.message });
     }
 });
 
@@ -2192,6 +2230,26 @@ app.get('/api/bot/user/:username', checkBotAuth, async (req, res) => {
         console.error('Bot get user error:', error);
         res.status(500).json({ error: 'Failed to get user info' });
     }
+});
+
+// Simple connection test endpoint
+app.get('/api/health', (req, res) => {
+    const dbState = mongoose.connection.readyState;
+    const states = {
+        0: 'Disconnected',
+        1: 'Connected', 
+        2: 'Connecting',
+        3: 'Disconnecting'
+    };
+    
+    res.json({
+        status: 'OK',
+        database: {
+            state: states[dbState],
+            connected: dbState === 1
+        },
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Debug route to test database connection
