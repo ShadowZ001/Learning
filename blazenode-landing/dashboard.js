@@ -443,17 +443,25 @@ class Dashboard {
         }
 
         serversList.innerHTML = this.servers.map(server => `
-            <div class="server-item" onclick="openServerPanel('${server.attributes.identifier}')" style="cursor: pointer;">
-                <div class="server-info">
+            <div class="server-item">
+                <div class="server-info" onclick="openServerPanel('${server.attributes.identifier}')" style="cursor: pointer; flex: 1;">
                     <div class="status-dot ${server.attributes.suspended ? 'offline' : 'online'}"></div>
                     <div>
                         <div class="server-name">${server.attributes.name}</div>
                         <div class="server-id">${server.attributes.identifier}</div>
                     </div>
                 </div>
-                <div class="server-specs">
+                <div class="server-specs" onclick="openServerPanel('${server.attributes.identifier}')" style="cursor: pointer; flex: 1;">
                     <div>RAM: ${(server.attributes.limits.memory / 1024).toFixed(1)}GB | CPU: ${server.attributes.limits.cpu}% | Disk: ${(server.attributes.limits.disk / 1024).toFixed(1)}GB</div>
                     <div class="server-link">Click to manage →</div>
+                </div>
+                <div class="server-actions" style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn-edit" onclick="event.stopPropagation(); editServer('${server.attributes.identifier}')" style="padding: 4px 8px; font-size: 12px;">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-danger" onclick="event.stopPropagation(); deleteServer('${server.attributes.identifier}', '${server.attributes.name}')" style="padding: 4px 8px; font-size: 12px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -492,7 +500,8 @@ class Dashboard {
                     <td>${diskUsed}MB / ${server.attributes.limits.disk}MB</td>
                     <td>
                         <button class="btn-secondary" onclick="openServerPanel('${server.attributes.identifier}')" style="padding: 6px 12px; font-size: 12px; margin-right: 5px;">Manage</button>
-                        <button class="btn-edit" onclick="editServer('${server.attributes.identifier}')" style="padding: 6px 12px; font-size: 12px;">Edit</button>
+                        <button class="btn-edit" onclick="editServer('${server.attributes.identifier}')" style="padding: 6px 12px; font-size: 12px; margin-right: 5px;">Edit</button>
+                        <button class="btn-danger" onclick="deleteServer('${server.attributes.identifier}', '${server.attributes.name}')" style="padding: 6px 12px; font-size: 12px;">Delete</button>
                     </td>
                 </tr>
             `;
@@ -550,6 +559,10 @@ class Dashboard {
                         <button class="server-action-btn btn-edit" onclick="editServer('${server.attributes.identifier}')">
                             <i class="fas fa-edit"></i>
                             Edit
+                        </button>
+                        <button class="server-action-btn btn-danger" onclick="deleteServer('${server.attributes.identifier}', '${server.attributes.name}')">
+                            <i class="fas fa-trash"></i>
+                            Delete
                         </button>
                     </div>
                 </div>
@@ -3099,6 +3112,45 @@ async function updateLinkvertiseUrl() {
     }
 }
 
+// Delete server function
+async function deleteServer(serverIdentifier, serverName) {
+    if (!confirm(`Are you sure you want to delete server "${serverName}"?\n\nThis action cannot be undone and will permanently delete the server from both the dashboard and Pterodactyl panel.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/delete-server', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ serverIdentifier })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            dashboard.showNotification(`Server "${serverName}" deleted successfully!`, 'success');
+            
+            // Update user server count in session
+            if (dashboard.currentUser) {
+                dashboard.currentUser.serverCount = Math.max(0, (dashboard.currentUser.serverCount || 0) - 1);
+            }
+            
+            // Refresh servers and dashboard data
+            await dashboard.loadServers();
+            await dashboard.loadResourceUsage();
+            dashboard.updateDashboardStats();
+        } else {
+            dashboard.showNotification(data.error || 'Failed to delete server', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting server:', error);
+        dashboard.showNotification('Error deleting server', 'error');
+    }
+}
+
 // Add CSS animation
 const style = document.createElement('style');
 style.textContent = `
@@ -3111,6 +3163,19 @@ style.textContent = `
             transform: translateX(0);
             opacity: 1;
         }
+    }
+    
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-danger:hover {
+        background: #dc2626;
     }
 `;
 document.head.appendChild(style);

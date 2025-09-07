@@ -4,20 +4,18 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const path = require('path');
-require('dotenv').config();
+const config = require('./config');
 
 const User = require('./models/User');
 const Coupon = require('./models/Coupon');
 const UserResources = require('./models/UserResources');
 
 const app = express();
-// Port will be handled by the hosting platform (Vercel, Netlify, etc.)
-const PORT = process.env.PORT || 3000;
 
 console.log('Starting BlazeNode Dashboard Server...');
 
 // MongoDB connection with better error handling
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(config.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     serverSelectionTimeoutMS: 5000,
@@ -48,9 +46,9 @@ mongoose.connection.on('disconnected', () => {
 
 // Pterodactyl API configuration
 const pterodactylAPI = axios.create({
-    baseURL: process.env.PTERODACTYL_URL + '/api/application',
+    baseURL: config.PTERODACTYL_URL + '/api/application',
     headers: {
-        'Authorization': `Bearer ${process.env.PTERODACTYL_API_KEY}`,
+        'Authorization': `Bearer ${config.PTERODACTYL_API_KEY}`,
         'Content-Type': 'application/json',
         'Accept': 'Application/vnd.pterodactyl.v1+json'
     },
@@ -98,7 +96,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('.'));
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'blazenode-secret-2025',
+    secret: config.SESSION_SECRET,
     resave: true,
     saveUninitialized: true,
     name: 'connect.sid',
@@ -494,9 +492,19 @@ app.post('/api/create-server', async (req, res) => {
     try {
         const user = await User.findById(req.session.user.id);
         
-        // Check server limit
-        if (user.serverCount >= 2) {
-            return res.status(400).json({ error: 'Server limit reached (2 servers maximum)' });
+        // Get user's purchased resources to check server slots
+        let userResources = await UserResources.findOne({ userId: user._id });
+        if (!userResources) {
+            userResources = new UserResources({ userId: user._id });
+            await userResources.save();
+        }
+        
+        // Check server limit using purchased slots
+        const maxServers = userResources.serverSlots; // This includes base + purchased slots
+        if (user.serverCount >= maxServers) {
+            return res.status(400).json({ 
+                error: `Server limit reached (${maxServers} servers maximum). Buy more slots from the store.` 
+            });
         }
 
         // Validate input
@@ -868,10 +876,96 @@ app.post('/api/create-server', async (req, res) => {
         res.status(statusCode).json({ 
             error: errorMessage,
             details: error.response?.data?.message || error.message,
-            debug: process.env.NODE_ENV === 'development' ? {
+            debug: config.NODE_ENV === 'development' ? {
                 pterodactylError: error.response?.data,
                 serverData: serverData
             } : undefined
+        });
+    }
+});
+
+// API route to delete server
+app.post('/api/delete-server', async (req, res) => {
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { serverIdentifier } = req.body;
+
+    console.log('\n=== SERVER DELETION REQUEST ===');
+    console.log('User:', req.session.user.username);
+    console.log('Server identifier:', serverIdentifier);
+
+    try {
+        const user = await User.findById(req.session.user.id);
+        
+        if (!serverIdentifier) {
+            return res.status(400).json({ error: 'Server identifier is required' });
+        }
+
+        // Ensure user has Pterodactyl account
+        if (!user.pterodactylUserId) {
+            return res.status(400).json({ error: 'Pterodactyl account not found' });
+        }
+
+        // Get user servers to verify ownership
+        const servers = await getUserServers(user.pterodactylUserId);
+        const server = servers.find(s => s.attributes.identifier === serverIdentifier);
+        
+        if (!server) {
+            return res.status(404).json({ error: 'Server not found or access denied' });
+        }
+
+        console.log('Deleting server:', server.attributes.name, 'ID:', server.attributes.id);
+
+        // Delete server from Pterodactyl
+        const response = await pterodactylAPI.delete(`/servers/${server.attributes.id}`);
+        
+        if (response.status === 204) {
+            // Update user server count
+            user.serverCount = Math.max(0, (user.serverCount || 0) - 1);
+            await user.save();
+            
+            // Update session
+            req.session.user.serverCount = user.serverCount;
+            
+            console.log('Server deleted successfully:', serverIdentifier);
+            console.log('Updated user server count:', user.serverCount);
+            console.log('=== SERVER DELETION COMPLETE ===\n');
+            
+            res.json({ 
+                success: true, 
+                message: `Server "${server.attributes.name}" deleted successfully!`
+            });
+        } else {
+            console.error('Pterodactyl API error:', response.data);
+            res.status(500).json({ error: 'Failed to delete server from panel' });
+        }
+        
+    } catch (error) {
+        console.error('Delete server error:', error.response?.data || error.message);
+        
+        let errorMessage = 'Failed to delete server';
+        
+        if (error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            console.error('Pterodactyl API errors:', errors);
+            const firstError = Object.values(errors)[0];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.response?.status === 404) {
+            errorMessage = 'Server not found in panel';
+        } else if (error.response?.status === 403) {
+            errorMessage = 'Permission denied - cannot delete server';
+        } else if (error.response?.status >= 500) {
+            errorMessage = 'Panel server error - please try again later';
+        }
+        
+        const statusCode = error.response?.status || 500;
+        res.status(statusCode).json({ 
+            error: errorMessage,
+            details: error.response?.data?.message || error.message
         });
     }
 });
@@ -1983,7 +2077,7 @@ app.get('/api/debug/users', async (req, res) => {
 // Bot API middleware
 function checkBotAuth(req, res, next) {
     const authHeader = req.headers.authorization;
-    const expectedToken = `Bearer ${process.env.BOT_API_KEY || 'blazenode-bot-api-key-2025'}`;
+    const expectedToken = `Bearer ${config.BOT_API_KEY}`;
     
     if (authHeader === expectedToken) {
         next();
@@ -2201,19 +2295,12 @@ app.get('/dashboard', (req, res) => {
     }
 })();
 
-const server = app.listen(PORT, () => {
-    console.log(`🚀 BlazeNode Dashboard Server Started`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔧 Features: Admin Panel, User Management, Server Creation, Linkvertise Integration`);
-    console.log(`🤖 Discord Bot Integration: Ready`);
-    console.log(`🔗 Advanced Security: Multi-factor validation, Anti-fraud protection`);
-    console.log(`⚡ Ready for production deployment!`);
-});
+// Export app for cPanel
+module.exports = app;
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('🔄 SIGTERM received, shutting down gracefully');
-    server.close(() => {
-        console.log('✅ Process terminated');
-    });
-});
+console.log(`🚀 BlazeNode Dashboard Server Ready`);
+console.log(`📊 Environment: ${config.NODE_ENV}`);
+console.log(`🔧 Features: Admin Panel, User Management, Server Creation, Linkvertise Integration`);
+console.log(`🤖 Discord Bot Integration: Ready`);
+console.log(`🔗 Advanced Security: Multi-factor validation, Anti-fraud protection`);
+console.log(`⚡ Ready for cPanel deployment!`);
