@@ -5,6 +5,7 @@ import os
 from config import TOKEN
 from utils.database import Database
 from utils.emoji import EmojiHandler
+from datetime import datetime
 
 class DravonBot(commands.Bot):
     def __init__(self):
@@ -103,38 +104,68 @@ class DravonBot(commands.Bot):
         if botadmin_cog and botadmin_cog.is_blacklisted(message.author.id):
             return
         
-        # Premium no-prefix system - ONLY for premium users
+        # Premium no-prefix system - Premium users OR premium guilds
         if message.guild and not message.content.startswith(('>', '/', '<@')):
             premium_cog = self.get_cog('Premium')
-            if premium_cog and await premium_cog.is_premium(message.author.id):
-                # Only premium users can use commands without prefix
-                ctx = await self.get_context(message)
-                if not ctx.valid:
+            if premium_cog:
+                user_premium = await premium_cog.is_premium(message.author.id)
+                guild_premium = await premium_cog.is_premium_guild(message.guild.id)
+                
+                if user_premium or guild_premium:
+                    # Only premium users can use commands without prefix
                     content_lower = message.content.lower().strip()
                     first_word = content_lower.split()[0] if content_lower.split() else ''
                     
-                    # Get all command names (case-insensitive)
+                    # Comprehensive command list including all cog commands
                     all_command_names = set()
                     
-                    # Get commands from bot registry
-                    for command in self.all_commands.values():
-                        all_command_names.add(command.name.lower())
-                        if hasattr(command, 'aliases') and command.aliases:
-                            all_command_names.update([alias.lower() for alias in command.aliases])
-                    
-                    # Get commands from all cogs
-                    for cog in self.cogs.values():
-                        for command in cog.get_commands():
+                    # Get all commands from bot
+                    def add_commands_recursive(commands):
+                        for command in commands:
                             all_command_names.add(command.name.lower())
                             if hasattr(command, 'aliases') and command.aliases:
                                 all_command_names.update([alias.lower() for alias in command.aliases])
+                            # Handle group commands
+                            if hasattr(command, 'commands'):
+                                add_commands_recursive(command.commands)
                     
-                    # Static command list for reliability
+                    # Add all bot commands
+                    add_commands_recursive(self.commands)
+                    
+                    # Add hybrid commands and app commands
+                    for cog in self.cogs.values():
+                        add_commands_recursive(cog.get_commands())
+                    
+                    # Extended static command list for all features
                     static_commands = {
+                        # Basic commands
                         'help', 'mhelp', 'h', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
-                        'ping', 'support', 'partnership', 'docs', 'play', 'p', 'skip', 'stop', 
-                        'pause', 'resume', 'queue', 'q', 'volume', 'ban', 'kick', 'mute', 'warn',
-                        'ticket', 'embed', 'premium', 'kiss', 'slap', 'kill', 'afk', 'level'
+                        'ping', 'support', 'partnership', 'docs', 'invite',
+                        
+                        # Music commands
+                        'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue', 'q', 'volume',
+                        'shuffle', 'clear', 'nowplaying', 'np', 'loop', 'autoplay',
+                        
+                        # Moderation commands
+                        'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge',
+                        'timeout', 'untimeout', 'slowmode', 'lock', 'unlock',
+                        
+                        # Setup commands
+                        'welcome', 'leave', 'boost', 'autorole', 'automod', 'antinuke',
+                        'ticket', 'embed', 'logs', 'prefix',
+                        
+                        # Premium commands
+                        'premium', 'mode', 'activate',
+                        
+                        # Fun commands
+                        'kiss', 'slap', 'kill', 'hug', 'pat', 'poke',
+                        
+                        # Utility commands
+                        'afk', 'level', 'rank', 'leaderboard', 'avatar', 'banner',
+                        'giveaway', 'poll', 'remind', 'weather', 'translate',
+                        
+                        # Admin commands
+                        'whitelist', 'blacklist', 'reload', 'sync', 'eval', 'exec'
                     }
                     all_command_names.update(static_commands)
                     
@@ -148,6 +179,43 @@ class DravonBot(commands.Bot):
             message.content = self.emoji_handler.replace_emojis(message.content)
         
         await self.process_commands(message)
+    
+    async def process_commands(self, message):
+        """Process commands with cooldown handling"""
+        ctx = await self.get_context(message)
+        if ctx.command is None:
+            return
+        
+        # Apply cooldowns based on premium status
+        premium_cog = self.get_cog('Premium')
+        if premium_cog and message.guild:
+            user_premium = await premium_cog.is_premium(message.author.id)
+            guild_premium = await premium_cog.is_premium_guild(message.guild.id)
+            
+            # No cooldown for premium users/guilds, 2 second cooldown for normal users
+            if not (user_premium or guild_premium):
+                # Apply 2 second cooldown for non-premium
+                if not hasattr(self, '_cooldowns'):
+                    self._cooldowns = {}
+                
+                user_key = f"{message.author.id}_{ctx.command.name}"
+                current_time = datetime.now().timestamp()
+                
+                if user_key in self._cooldowns:
+                    time_diff = current_time - self._cooldowns[user_key]
+                    if time_diff < 2.0:  # 2 second cooldown
+                        remaining = 2.0 - time_diff
+                        embed = discord.Embed(
+                            title="⏰ Cooldown Active",
+                            description=f"Please wait **{remaining:.1f}s** before using this command again.\n\n💎 **Premium users and guilds have no cooldowns!**",
+                            color=0xff8c00
+                        )
+                        await ctx.send(embed=embed, delete_after=3)
+                        return
+                
+                self._cooldowns[user_key] = current_time
+        
+        await self.invoke(ctx)
 
 async def main():
     bot = DravonBot()

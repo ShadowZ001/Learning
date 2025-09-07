@@ -258,6 +258,71 @@ class Premium(commands.Cog):
                 embed.set_footer(text="🏆 Premium User • Powered by Dravon™")
         return embed
     
+    @premium_group.command(name="activate")
+    async def premium_activate(self, ctx):
+        """Activate premium guild (Premium users only)"""
+        if not await self.is_premium(ctx.author.id):
+            embed = discord.Embed(
+                title="❌ Premium Required",
+                description="Only premium users can activate premium guilds!",
+                color=0xff0000
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+            return
+        
+        # Check if guild is already premium
+        guild_premium = await self.bot.db.get_premium_guild(ctx.guild.id)
+        if guild_premium:
+            embed = discord.Embed(
+                title="⚠️ Already Activated",
+                description="This server is already a premium guild!",
+                color=0xffd700
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+            return
+        
+        # Get user's linked servers count
+        user_guilds = await self.bot.db.get_user_premium_guilds(ctx.author.id)
+        linked_count = len(user_guilds) if user_guilds else 0
+        
+        if linked_count >= 50:
+            embed = discord.Embed(
+                title="❌ Limit Reached",
+                description="You have reached the maximum limit of 50 premium guilds!",
+                color=0xff0000
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+            return
+        
+        # Activate premium guild
+        await self.bot.db.set_premium_guild(ctx.guild.id, ctx.author.id)
+        
+        embed = discord.Embed(
+            title="🌟 Premium Guild Activated!",
+            description=f"✅ **{ctx.guild.name}** has been successfully activated as one of your premium guilds!\n\n🔹 **Linked by:** {ctx.author.mention}\n🔐 **Tier:** `Premium` | 🧩 **Linked Servers:** `{linked_count + 1}/50`\n\n✨ **What's Next?**\n• Access exclusive Dravon Premium features\n• Enhanced moderation, security, and support tools\n• Faster bot responses, new modules, and more!",
+            color=0xffd700
+        )
+        embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else self.bot.user.display_avatar.url)
+        embed = add_dravon_footer(embed)
+        
+        await ctx.send(embed=embed)
+    
+    async def is_premium_guild(self, guild_id: int) -> bool:
+        """Check if guild has premium activated"""
+        guild_data = await self.bot.db.get_premium_guild(guild_id)
+        if not guild_data:
+            return False
+        
+        # Check if the user who activated it still has premium
+        activator_id = guild_data.get("activator_id")
+        if activator_id:
+            return await self.is_premium(activator_id)
+        
+        return False
+    
     async def get_music_mode(self, user_id: int) -> str:
         """Get premium user's music mode preference"""
         if not await self.is_premium(user_id):

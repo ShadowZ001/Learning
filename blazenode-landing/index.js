@@ -14,43 +14,17 @@ const app = express();
 
 console.log('Starting BlazeNode Dashboard Server...');
 
-// MongoDB connection with retry logic
-let isConnecting = false;
-
-async function connectToMongoDB() {
-    if (isConnecting) return;
-    isConnecting = true;
-    
-    try {
-        await mongoose.connect(config.MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 30000,
-            socketTimeoutMS: 45000,
-            connectTimeoutMS: 30000,
-            maxPoolSize: 5,
-            minPoolSize: 1,
-            bufferCommands: true,
-            bufferMaxEntries: 0
-        });
-        
-        console.log('✅ Dashboard connected to MongoDB');
-        console.log('📊 Database Name:', mongoose.connection.db.databaseName);
-        isConnecting = false;
-    } catch (err) {
-        console.error('❌ MongoDB connection failed:', err.message);
-        isConnecting = false;
-        
-        // Retry connection after 5 seconds
-        setTimeout(() => {
-            console.log('🔄 Retrying MongoDB connection...');
-            connectToMongoDB();
-        }, 5000);
-    }
-}
-
-// Initial connection
-connectToMongoDB();
+// Simple MongoDB connection
+mongoose.connect(config.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => {
+    console.log('✅ Dashboard connected to MongoDB');
+})
+.catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+});
 
 // MongoDB connection events
 mongoose.connection.on('connected', () => {
@@ -63,17 +37,6 @@ mongoose.connection.on('error', (err) => {
 
 mongoose.connection.on('disconnected', () => {
     console.log('🔌 Dashboard mongoose disconnected from MongoDB');
-    // Auto-reconnect
-    setTimeout(() => {
-        if (mongoose.connection.readyState === 0) {
-            console.log('🔄 Auto-reconnecting to MongoDB...');
-            connectToMongoDB();
-        }
-    }, 5000);
-});
-
-mongoose.connection.on('reconnected', () => {
-    console.log('🔄 Dashboard mongoose reconnected to MongoDB');
 });
 
 // Pterodactyl API configuration
@@ -263,23 +226,7 @@ app.post('/api/login', async (req, res) => {
     console.log('MongoDB state:', mongoose.connection.readyState);
 
     try {
-        // Check database connection first
-        if (mongoose.connection.readyState !== 1) {
-            console.log('❌ Database not connected during login, attempting reconnect...');
-            
-            // Try to reconnect
-            try {
-                await connectToMongoDB();
-                // Wait a moment for connection
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                if (mongoose.connection.readyState !== 1) {
-                    return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
-                }
-            } catch (reconnectError) {
-                return res.status(503).json({ error: 'Database connection error. Please try again.' });
-            }
-        }
+        // Skip database check - let mongoose handle it
 
         // Validate input
         if (!username || !password) {
@@ -364,23 +311,7 @@ app.get('/api/user', async (req, res) => {
     console.log('Session user:', req.session?.user?.username);
     console.log('MongoDB state:', mongoose.connection.readyState);
     
-    // Check database connection
-    if (mongoose.connection.readyState !== 1) {
-        console.log('❌ Database not connected, attempting reconnect...');
-        
-        // Try to reconnect
-        try {
-            await connectToMongoDB();
-            // Wait a moment for connection
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            if (mongoose.connection.readyState !== 1) {
-                return res.status(503).json({ error: 'Database temporarily unavailable' });
-            }
-        } catch (reconnectError) {
-            return res.status(503).json({ error: 'Database connection error' });
-        }
-    }
+    // Skip database check - let mongoose handle it
     
     if (!req.session || !req.session.user) {
         console.log('No user in session - not authenticated');

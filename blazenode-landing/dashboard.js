@@ -95,26 +95,12 @@ class Dashboard {
                 this.updateCoinsDisplay();
                 
                 return true;
-            } else if (response.status === 503) {
-                // Database connection error
-                const errorData = await response.json().catch(() => ({ error: 'Database connection error' }));
-                this.showNotification(errorData.error || 'Database connection error. Please try again.', 'error');
-                console.log('❌ Database connection error');
-                return false;
             } else {
                 console.log('❌ User not authenticated');
                 return false;
             }
         } catch (error) {
             console.error('❌ Error loading user data:', error);
-            
-            // Show user-friendly error message
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                this.showNotification('Connection error. Please check your internet connection.', 'error');
-            } else {
-                this.showNotification('Unable to connect to server. Please try again.', 'error');
-            }
-            
             return false;
         }
     }

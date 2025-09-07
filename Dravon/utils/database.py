@@ -355,6 +355,23 @@ class Database:
         result = await self.db.premium_users.find_one({"user_id": user_id})
         return result.get("music_mode") if result else None
     
+    async def set_premium_guild(self, guild_id: int, activator_id: int):
+        await self.db.premium_guilds.update_one(
+            {"guild_id": guild_id},
+            {"$set": {"activator_id": activator_id, "activated_at": datetime.now()}},
+            upsert=True
+        )
+    
+    async def get_premium_guild(self, guild_id: int) -> Optional[Dict[str, Any]]:
+        return await self.db.premium_guilds.find_one({"guild_id": guild_id})
+    
+    async def get_user_premium_guilds(self, user_id: int) -> List[Dict[str, Any]]:
+        cursor = self.db.premium_guilds.find({"activator_id": user_id})
+        return await cursor.to_list(length=None)
+    
+    async def remove_premium_guild(self, guild_id: int):
+        await self.db.premium_guilds.delete_one({"guild_id": guild_id})
+    
     async def get_levelup_config(self, guild_id: int) -> Optional[Dict[str, Any]]:
         result = await self.db.levelup_configs.find_one({"guild_id": guild_id})
         return result["config"] if result else None
