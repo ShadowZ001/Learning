@@ -295,12 +295,7 @@ app.post('/api/login', async (req, res) => {
         console.error('LOGIN ERROR:', error.message);
         console.error('Full error:', error);
         
-        // Provide more specific error messages
-        if (error.name === 'MongooseError' || error.name === 'MongoError' || error.message.includes('connection')) {
-            res.status(503).json({ error: 'Database temporarily unavailable. Please try again.' });
-        } else {
-            res.status(500).json({ error: 'Login failed. Please try again.' });
-        }
+        res.status(500).json({ error: 'Login failed. Please try again.' });
     }
 });
 
