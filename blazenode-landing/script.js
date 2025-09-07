@@ -294,6 +294,20 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Password toggle function
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('passwordToggleIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
 // Add ripple animation
 const rippleStyle = document.createElement('style');
 rippleStyle.textContent = `
@@ -302,6 +316,37 @@ rippleStyle.textContent = `
             transform: scale(2);
             opacity: 0;
         }
+    }
+    
+    .password-input-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    
+    .password-input-container input {
+        flex: 1;
+        padding-right: 45px;
+    }
+    
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        transition: color 0.3s ease;
+    }
+    
+    .password-toggle:hover {
+        color: #ff6b35;
+    }
+    
+    .password-toggle i {
+        font-size: 16px;
     }
 `;
 document.head.appendChild(rippleStyle);

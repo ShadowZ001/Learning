@@ -288,60 +288,33 @@ app.post('/api/login', async (req, res) => {
         console.log('\n--- STEP 3: USER LOOKUP ---');
         console.log('Searching for user with username:', cleanUsername);
         
-        let user;
+        // Simple database query - no timeout
         try {
-            // Try to find user with exact match
             user = await User.findOne({ 
                 username: cleanUsername,
                 password: cleanPassword
-            }).maxTimeMS(10000); // 10 second timeout
+            });
             
-            console.log('Database query completed');
             console.log('User found:', !!user);
             
-            if (user) {
-                console.log('User details:', {
-                    id: user._id,
-                    username: user.username,
-                    coins: user.coins,
-                    serverCount: user.serverCount,
-                    pterodactylUserId: user.pterodactylUserId,
-                    createdAt: user.createdAt
-                });
-            } else {
-                console.log('No user found with provided credentials');
-                
-                // Debug: Check if user exists with different password
-                const userWithSameUsername = await User.findOne({ username: cleanUsername }).maxTimeMS(5000);
-                if (userWithSameUsername) {
-                    console.log('User exists but password mismatch');
-                    console.log('Expected password:', userWithSameUsername.password);
-                    console.log('Provided password:', cleanPassword);
+            if (!user) {
+                // Check if username exists
+                const userCheck = await User.findOne({ username: cleanUsername });
+                if (userCheck) {
+                    console.log('Username exists, wrong password');
                 } else {
-                    console.log('Username does not exist in database');
+                    console.log('Username does not exist');
                 }
                 
-                // Debug: Show all users (limit 10 for security)
-                const allUsers = await User.find({}).limit(10).select('username password').maxTimeMS(5000);
-                console.log('Available users in database:');
-                allUsers.forEach((u, index) => {
-                    console.log(`${index + 1}. Username: "${u.username}", Password: "${u.password}"`);
-                });
+                // Show available users for debugging
+                const allUsers = await User.find({}).select('username password');
+                console.log('Available users:');
+                allUsers.forEach(u => console.log(`${u.username}:${u.password}`));
             }
             
         } catch (dbError) {
-            console.error('Database query error:', dbError);
-            console.error('Error name:', dbError.name);
-            console.error('Error message:', dbError.message);
-            
-            return res.status(500).json({ 
-                error: 'Database query failed',
-                debug: {
-                    errorName: dbError.name,
-                    errorMessage: dbError.message,
-                    mongoState: mongoose.connection.readyState
-                }
-            });
+            console.error('Database error:', dbError.message);
+            return res.status(500).json({ error: 'Database connection failed' });
         }
         
         // Check if user was found
@@ -552,8 +525,7 @@ app.get('/api/user', async (req, res) => {
         
         let user;
         try {
-            user = await User.findById(req.session.user.id).maxTimeMS(10000);
-            console.log('Database query completed');
+            user = await User.findById(req.session.user.id);
             console.log('User found in database:', !!user);
             
             if (user) {
