@@ -100,7 +100,7 @@ app.use(express.static('.'));
 app.use(session({
     secret: config.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
@@ -221,55 +221,67 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
     console.log('\n=== LOGIN ATTEMPT ===');
+    console.log('Request body:', req.body);
     console.log('Username:', username);
     console.log('Password:', password);
     console.log('MongoDB state:', mongoose.connection.readyState);
+    console.log('Session exists:', !!req.session);
+    console.log('Session ID:', req.sessionID);
 
     try {
-        // Skip database check - let mongoose handle it
-
-        // Validate input
+        // Validate input first
         if (!username || !password) {
+            console.log('❌ Missing username or password');
             return res.status(400).json({ error: 'Username and password required' });
         }
 
+        console.log('🔍 Searching for user in database...');
+        
         // Find user with exact match
         const user = await User.findOne({ 
             username: username.trim(),
             password: password.trim()
         });
         
-        console.log('User found:', user ? 'YES' : 'NO');
+        console.log('User search result:', user ? 'FOUND' : 'NOT FOUND');
         
         if (!user) {
-            // Debug: show available users (only in development)
-            if (config.NODE_ENV !== 'production') {
-                const allUsers = await User.find({}).select('username password');
-                console.log('Available users:', allUsers.map(u => `${u.username}:${u.password}`));
-            }
+            console.log('❌ User not found with credentials:', `${username.trim()}:${password.trim()}`);
+            
+            // Debug: show available users
+            const allUsers = await User.find({}).select('username password');
+            console.log('Available users in DB:', allUsers.map(u => `${u.username}:${u.password}`));
+            
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        console.log('LOGIN SUCCESS for user:', user.username);
+        console.log('✅ User found:', user.username);
+        console.log('User details:', {
+            id: user._id,
+            username: user.username,
+            coins: user.coins,
+            pterodactylUserId: user.pterodactylUserId
+        });
 
         // Create Pterodactyl user if not exists
         if (!user.pterodactylUserId) {
-            console.log('Creating Pterodactyl account for user:', user.username);
+            console.log('🔧 Creating Pterodactyl account for user:', user.username);
             const pterodactylUserId = await createPterodactylUser(user.username);
             if (pterodactylUserId) {
                 user.pterodactylUserId = pterodactylUserId;
-                console.log('Pterodactyl account created with ID:', pterodactylUserId);
+                console.log('✅ Pterodactyl account created with ID:', pterodactylUserId);
             } else {
-                console.error('Failed to create Pterodactyl account for:', user.username);
+                console.log('⚠️ Failed to create Pterodactyl account for:', user.username);
             }
         }
 
         // Update last login
         user.lastLogin = new Date();
         await user.save();
+        console.log('✅ User data updated in database');
 
-        // Create session
-        req.session.user = {
+        // Create session data
+        const sessionData = {
             id: user._id,
             username: user.username,
             coins: user.coins,
@@ -277,23 +289,33 @@ app.post('/api/login', async (req, res) => {
             serverCount: user.serverCount || 0
         };
         
-        // Force session save
+        console.log('🔐 Creating session with data:', sessionData);
+        
+        // Set session
+        req.session.user = sessionData;
+        
+        // Force session save and respond
         req.session.save((err) => {
             if (err) {
-                console.error('Session save error:', err);
+                console.error('❌ Session save error:', err);
                 return res.status(500).json({ error: 'Session save failed' });
             }
             
-            console.log('Session created and saved:', req.session.user);
+            console.log('✅ Session saved successfully');
             console.log('Session ID:', req.sessionID);
+            console.log('Session user:', req.session.user);
             console.log('=== LOGIN SUCCESS ===\n');
 
-            res.json({ success: true, user: req.session.user });
+            // Send success response
+            const response = { success: true, user: sessionData };
+            console.log('📤 Sending response:', response);
+            
+            res.json(response);
         });
         
     } catch (error) {
-        console.error('LOGIN ERROR:', error.message);
-        console.error('Full error:', error);
+        console.error('❌ LOGIN ERROR:', error.message);
+        console.error('Full error stack:', error.stack);
         
         res.status(500).json({ error: 'Login failed. Please try again.' });
     }
@@ -2223,8 +2245,48 @@ app.get('/api/health', (req, res) => {
             state: states[dbState],
             connected: dbState === 1
         },
+        session: {
+            exists: !!req.session,
+            id: req.sessionID,
+            user: req.session?.user?.username || null
+        },
         timestamp: new Date().toISOString()
     });
+});
+
+// Test login endpoint
+app.post('/api/test-login', async (req, res) => {
+    console.log('\n=== TEST LOGIN ENDPOINT ===');
+    console.log('Request body:', req.body);
+    console.log('Headers:', req.headers);
+    console.log('Session:', req.session);
+    
+    try {
+        const { username, password } = req.body;
+        
+        if (username === 'test' && password === 'test') {
+            req.session.user = {
+                id: 'test-id',
+                username: 'test',
+                coins: 1000
+            };
+            
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.status(500).json({ error: 'Session error' });
+                }
+                
+                console.log('Test session created:', req.session.user);
+                res.json({ success: true, message: 'Test login successful', user: req.session.user });
+            });
+        } else {
+            res.status(401).json({ error: 'Invalid test credentials' });
+        }
+    } catch (error) {
+        console.error('Test login error:', error);
+        res.status(500).json({ error: 'Test failed' });
+    }
 });
 
 // Debug route to test database connection
