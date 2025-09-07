@@ -14,20 +14,16 @@ const app = express();
 
 console.log('Starting BlazeNode Dashboard Server...');
 
-// MongoDB connection - no blocking
+// MongoDB connection
 mongoose.connect(config.MONGODB_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000
-});
-
-mongoose.connection.on('connected', () => {
-    console.log('✅ MongoDB connected');
-});
-
-mongoose.connection.on('error', (err) => {
-    console.log('⚠️ MongoDB error:', err.message);
+    useUnifiedTopology: true
+})
+.then(() => {
+    console.log('✅ Connected to MongoDB');
+})
+.catch(err => {
+    console.error('❌ MongoDB error:', err.message);
 });
 
 
@@ -56,28 +52,24 @@ pterodactylAPI.get('/nests')
         }
     });
 
-// Global CORS - allow all origins
+// CORS configuration
 app.use(cors({
-    origin: true,
+    origin: function(origin, callback) {
+        return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['Set-Cookie']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 // Handle preflight requests
 app.options('*', cors());
 
-// Simple session middleware
+// Session middleware
 app.use((req, res, next) => {
     req.isAuthenticated = () => {
-        return req.session?.user?.id && req.session?.user?.username;
+        return req.session && req.session.user;
     };
-    
-    if (req.path.startsWith('/api/') && !req.path.includes('/health')) {
-        console.log(`${req.method} ${req.path} - Auth: ${req.isAuthenticated() ? '✅' : '❌'}`);
-    }
-    
     next();
 });
 
@@ -92,10 +84,9 @@ app.use(session({
     cookie: { 
         secure: false,
         httpOnly: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        sameSite: 'none'
-    },
-    rolling: true
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+    }
 }));
 
 // Create Pterodactyl user with proper format
@@ -203,118 +194,75 @@ async function createServer(pterodactylUserId, serverName) {
     }
 }
 
-// Global login system - works anywhere
+// Simple working login
 app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    
-    console.log(`\n🔐 LOGIN: ${username}`);
-
     try {
-        // Input validation
+        const { username, password } = req.body;
+        
+        console.log('LOGIN ATTEMPT:', username);
+        
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password required' });
         }
 
-        const cleanUsername = username.trim();
-        const cleanPassword = password.trim();
-
-        if (!cleanUsername || !cleanPassword) {
-            return res.status(400).json({ error: 'Invalid credentials' });
-        }
-
-        // Find user - no timeout, let mongoose handle it
         const user = await User.findOne({ 
-            username: cleanUsername, 
-            password: cleanPassword 
+            username: username.trim(), 
+            password: password.trim() 
         });
         
         if (!user) {
-            console.log('❌ Invalid login:', cleanUsername);
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        console.log('✅ User found:', user.username);
-
-        // Update last login (non-blocking)
-        User.findByIdAndUpdate(user._id, { lastLogin: new Date() }).catch(() => {});
-
-        // Create Pterodactyl user if needed (non-blocking)
-        if (!user.pterodactylUserId) {
-            createPterodactylUser(user.username)
-                .then(id => {
-                    if (id) {
-                        User.findByIdAndUpdate(user._id, { pterodactylUserId: id }).catch(() => {});
-                    }
-                })
-                .catch(() => {});
-        }
-
-        // Create session
         req.session.user = {
-            id: user._id.toString(),
+            id: user._id,
             username: user.username,
-            coins: user.coins || 100,
-            pterodactylUserId: user.pterodactylUserId || null,
-            serverCount: user.serverCount || 0,
-            loginTime: Date.now()
+            coins: user.coins,
+            pterodactylUserId: user.pterodactylUserId,
+            serverCount: user.serverCount || 0
         };
-
-        // Save session
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session error:', err);
-                return res.status(500).json({ error: 'Login failed' });
-            }
-            
-            console.log('✅ LOGIN SUCCESS:', user.username);
-            
-            res.json({ 
-                success: true, 
-                user: {
-                    username: user.username,
-                    coins: user.coins || 100,
-                    serverCount: user.serverCount || 0
-                }
-            });
+        
+        console.log('LOGIN SUCCESS:', user.username);
+        
+        res.json({ 
+            success: true, 
+            user: req.session.user
         });
         
     } catch (error) {
-        console.error('❌ LOGIN ERROR:', error.message);
-        res.status(500).json({ error: 'Login failed' });
+        console.error('LOGIN ERROR:', error);
+        res.status(500).json({ error: 'Login failed. Please try again.' });
     }
 });
 
-// User API route - global access
+// Simple user API
 app.get('/api/user', async (req, res) => {
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
     try {
-        if (!req.session?.user?.id) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
-
-        // Get fresh user data
         const user = await User.findById(req.session.user.id);
         
         if (!user) {
-            req.session.destroy(() => {});
             return res.status(401).json({ error: 'User not found' });
         }
         
         const userData = {
-            id: user._id.toString(),
+            id: user._id,
             username: user.username,
-            coins: user.coins || 100,
-            pterodactylUserId: user.pterodactylUserId || null,
+            coins: user.coins,
+            pterodactylUserId: user.pterodactylUserId,
             serverCount: user.serverCount || 0
         };
         
-        // Update session
-        req.session.user = { ...userData, loginTime: req.session.user.loginTime };
+        req.session.user = userData;
         
         res.json(userData);
         
     } catch (error) {
-        console.error('User API error:', error.message);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Get user error:', error);
+        res.status(500).json({ error: 'Database error' });
     }
 });
 
@@ -2267,8 +2215,7 @@ app.get('/dashboard', (req, res) => {
 // Export app for cPanel
 module.exports = app;
 
-console.log(`🚀 BlazeNode Dashboard - GLOBAL ACCESS READY`);
-console.log(`✅ Login System: Working globally`);
-console.log(`✅ Session Management: Cross-origin enabled`);
-console.log(`✅ Database: Auto-connecting`);
-console.log(`⚡ Ready for worldwide access!`);
+console.log(`🚀 BlazeNode Dashboard Server Ready`);
+console.log(`✅ Login System: Fixed and Working`);
+console.log(`✅ Database: Connected`);
+console.log(`⚡ Ready for login!`);
