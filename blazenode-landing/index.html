@@ -93,27 +93,27 @@
                         <div class="login-icon">
                             <i class="fas fa-user-circle"></i>
                         </div>
-                        <h2>Welcome Back</h2>
-                        <p class="login-subtitle">Sign in to access your game servers and manage your resources</p>
+                        <h2 id="authTitle">Welcome Back</h2>
+                        <p class="login-subtitle" id="authSubtitle">Sign in to access your game servers and manage your resources</p>
                     </div>
                     
-                    <form id="loginForm" onsubmit="handleLogin(event)">
+                    <form id="authForm" onsubmit="handleAuth(event)">
                         <div class="form-group">
                             <label for="username">
                                 <i class="fas fa-user"></i>
                                 Username
                             </label>
-                            <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                            <input type="text" id="username" name="username" placeholder="Enter your username" required minlength="3" maxlength="20">
                         </div>
                         <div class="form-group">
                             <label for="password">
                                 <i class="fas fa-lock"></i>
                                 Password
                             </label>
-                            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                            <input type="password" id="password" name="password" placeholder="Enter your password" required minlength="3" maxlength="50">
                         </div>
                         
-                        <button type="submit" class="login-btn">
+                        <button type="submit" class="auth-btn login-mode">
                             <span class="btn-text">
                                 <i class="fas fa-sign-in-alt"></i>
                                 Sign In
@@ -122,6 +122,10 @@
                                 <div class="spinner"></div>
                             </div>
                         </button>
+                        
+                        <div class="auth-switch">
+                            <p>Don't have an account? <button type="button" onclick="toggleAuthMode()" class="switch-btn">Create Account</button></p>
+                        </div>
                     </form>
                     
                     <div class="login-footer">

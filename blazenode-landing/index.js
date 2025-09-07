@@ -81,16 +81,22 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
-// Session debugging middleware (only for API routes)
+// Enhanced session middleware
 app.use((req, res, next) => {
-    if (req.path.startsWith('/api/')) {
-        console.log(`${req.method} ${req.path}`);
-        if (req.session && req.session.user) {
-            console.log('✅ User authenticated:', req.session.user.username);
-        } else {
-            console.log('❌ No user in session');
-        }
+    // Add session helpers
+    req.isAuthenticated = () => {
+        return req.session?.user?.id && 
+               req.session?.user?.username &&
+               (Date.now() - (req.session.user.loginTime || 0)) < 24 * 60 * 60 * 1000;
+    };
+    
+    req.getUser = () => req.session?.user || null;
+    
+    // Log API requests
+    if (req.path.startsWith('/api/') && !req.path.includes('/health')) {
+        console.log(`${req.method} ${req.path} - Auth: ${req.isAuthenticated() ? '✅' : '❌'}`);
     }
+    
     next();
 });
 
@@ -216,217 +222,227 @@ async function createServer(pterodactylUserId, serverName) {
     }
 }
 
-// Simplified login route
+// Bulletproof login route for all users
 app.post('/api/login', async (req, res) => {
+    const startTime = Date.now();
     const { username, password } = req.body;
     
-    console.log('\n=== LOGIN ATTEMPT ===');
-    console.log('Request body:', req.body);
-    console.log('Username:', username);
-    console.log('Password:', password);
-    console.log('MongoDB state:', mongoose.connection.readyState);
-    console.log('Session exists:', !!req.session);
-    console.log('Session ID:', req.sessionID);
+    console.log(`\n🔐 LOGIN [${new Date().toISOString()}] User: ${username}`);
 
     try {
-        // Validate input first
-        if (!username || !password) {
-            console.log('❌ Missing username or password');
-            return res.status(400).json({ error: 'Username and password required' });
+        // 1. Input validation
+        if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+            console.log('❌ Invalid input data');
+            return res.status(400).json({ error: 'Username and password are required' });
         }
 
-        console.log('🔍 Searching for user in database...');
-        
-        // Find user with exact match
-        const user = await User.findOne({ 
-            username: username.trim(),
-            password: password.trim()
-        });
-        
-        console.log('User search result:', user ? 'FOUND' : 'NOT FOUND');
+        const cleanUsername = username.trim();
+        const cleanPassword = password.trim();
+
+        if (cleanUsername.length === 0 || cleanPassword.length === 0) {
+            console.log('❌ Empty credentials after trim');
+            return res.status(400).json({ error: 'Username and password cannot be empty' });
+        }
+
+        // 2. Database connection check
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ Database not connected, state:', mongoose.connection.readyState);
+            return res.status(503).json({ error: 'Database temporarily unavailable' });
+        }
+
+        // 3. Find user with timeout
+        console.log('🔍 Searching user...');
+        const user = await Promise.race([
+            User.findOne({ username: cleanUsername, password: cleanPassword }).lean(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 5000))
+        ]);
         
         if (!user) {
-            console.log('❌ User not found with credentials:', `${username.trim()}:${password.trim()}`);
-            
-            // Debug: show available users
-            const allUsers = await User.find({}).select('username password');
-            console.log('Available users in DB:', allUsers.map(u => `${u.username}:${u.password}`));
-            
+            console.log('❌ Invalid credentials for:', cleanUsername);
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        console.log('✅ User found:', user.username);
-        console.log('User details:', {
-            id: user._id,
-            username: user.username,
-            coins: user.coins,
-            pterodactylUserId: user.pterodactylUserId
-        });
+        console.log('✅ User authenticated:', user.username);
 
-        // Create Pterodactyl user if not exists
-        if (!user.pterodactylUserId) {
-            console.log('🔧 Creating Pterodactyl account for user:', user.username);
-            const pterodactylUserId = await createPterodactylUser(user.username);
-            if (pterodactylUserId) {
-                user.pterodactylUserId = pterodactylUserId;
-                console.log('✅ Pterodactyl account created with ID:', pterodactylUserId);
-            } else {
-                console.log('⚠️ Failed to create Pterodactyl account for:', user.username);
-            }
+        // 4. Update user data (non-blocking)
+        const updatePromise = User.findByIdAndUpdate(
+            user._id, 
+            { lastLogin: new Date() },
+            { new: false }
+        ).catch(err => console.log('⚠️ Update failed:', err.message));
+
+        // 5. Create Pterodactyl user if needed (non-blocking)
+        let pterodactylUserId = user.pterodactylUserId;
+        if (!pterodactylUserId) {
+            createPterodactylUser(user.username)
+                .then(id => {
+                    if (id) {
+                        User.findByIdAndUpdate(user._id, { pterodactylUserId: id }).catch(() => {});
+                        console.log('✅ Pterodactyl user created:', id);
+                    }
+                })
+                .catch(err => console.log('⚠️ Pterodactyl creation failed:', err.message));
         }
 
-        // Update last login
-        user.lastLogin = new Date();
-        await user.save();
-        console.log('✅ User data updated in database');
-
-        // Create session data
+        // 6. Create session
         const sessionData = {
-            id: user._id,
+            id: user._id.toString(),
             username: user.username,
-            coins: user.coins,
-            pterodactylUserId: user.pterodactylUserId,
-            serverCount: user.serverCount || 0
+            coins: user.coins || 100,
+            pterodactylUserId: pterodactylUserId || null,
+            serverCount: user.serverCount || 0,
+            loginTime: Date.now()
         };
-        
-        console.log('🔐 Creating session with data:', sessionData);
-        
-        // Set session
-        req.session.user = sessionData;
-        
-        // Force session save and respond
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ Session save error:', err);
-                return res.status(500).json({ error: 'Session save failed' });
-            }
-            
-            console.log('✅ Session saved successfully');
-            console.log('Session ID:', req.sessionID);
-            console.log('Session user:', req.session.user);
-            console.log('=== LOGIN SUCCESS ===\n');
 
-            // Send success response
-            const response = { success: true, user: sessionData };
-            console.log('📤 Sending response:', response);
+        req.session.user = sessionData;
+
+        // 7. Save session with timeout
+        const sessionSavePromise = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Session timeout')), 3000);
             
-            res.json(response);
+            req.session.save((err) => {
+                clearTimeout(timeout);
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        await sessionSavePromise;
+
+        const duration = Date.now() - startTime;
+        console.log(`✅ LOGIN SUCCESS [${duration}ms] User: ${user.username}`);
+
+        // Execute non-critical updates
+        updatePromise;
+
+        res.json({ 
+            success: true, 
+            user: {
+                username: sessionData.username,
+                coins: sessionData.coins,
+                serverCount: sessionData.serverCount
+            }
         });
         
     } catch (error) {
-        console.error('❌ LOGIN ERROR:', error.message);
-        console.error('Full error stack:', error.stack);
+        const duration = Date.now() - startTime;
+        console.error(`❌ LOGIN FAILED [${duration}ms]:`, error.message);
         
-        res.status(500).json({ error: 'Login failed. Please try again.' });
+        if (error.message === 'Database timeout') {
+            return res.status(503).json({ error: 'Database is slow, please try again' });
+        }
+        if (error.message === 'Session timeout') {
+            return res.status(500).json({ error: 'Session error, please try again' });
+        }
+        
+        res.status(500).json({ error: 'Login failed, please try again' });
     }
 });
 
-// API route to get current user
+// Bulletproof user API route
 app.get('/api/user', async (req, res) => {
-    console.log('\n=== GET USER REQUEST ===');
-    console.log('Session exists:', !!req.session);
-    console.log('Session user:', req.session?.user?.username);
-    console.log('MongoDB state:', mongoose.connection.readyState);
-    
-    // Skip database check - let mongoose handle it
-    
-    if (!req.session || !req.session.user) {
-        console.log('No user in session - not authenticated');
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-    
     try {
-        const user = await User.findById(req.session.user.id);
+        // 1. Session validation
+        if (!req.session?.user?.id) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        // 2. Check session age (24 hours max)
+        const sessionAge = Date.now() - (req.session.user.loginTime || 0);
+        if (sessionAge > 24 * 60 * 60 * 1000) {
+            req.session.destroy(() => {});
+            return res.status(401).json({ error: 'Session expired' });
+        }
+
+        // 3. Database check with timeout
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        }
+
+        // 4. Get fresh user data
+        const user = await Promise.race([
+            User.findById(req.session.user.id).lean(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
         
         if (!user) {
-            console.log('User not found in database');
+            req.session.destroy(() => {});
             return res.status(401).json({ error: 'User not found' });
         }
         
-        console.log('✅ User found:', user.username);
-        
-        // Return fresh user data
+        // 5. Return user data
         const userData = {
-            id: user._id,
+            id: user._id.toString(),
             username: user.username,
-            coins: user.coins,
-            pterodactylUserId: user.pterodactylUserId,
+            coins: user.coins || 100,
+            pterodactylUserId: user.pterodactylUserId || null,
             serverCount: user.serverCount || 0
         };
         
-        // Update session
-        req.session.user = userData;
+        // 6. Update session (non-blocking)
+        req.session.user = { ...userData, loginTime: req.session.user.loginTime };
         
-        console.log('=== GET USER SUCCESS ===\n');
         res.json(userData);
         
     } catch (error) {
-        console.error('Get user error:', error);
-        res.status(500).json({ error: 'Database error: ' + error.message });
+        console.error('User API error:', error.message);
+        
+        if (error.message === 'timeout') {
+            return res.status(503).json({ error: 'Database slow, try again' });
+        }
+        
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
 // API route to get user servers
 app.get('/api/servers', async (req, res) => {
-    if (!req.session.user) {
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
     try {
-        const user = await User.findById(req.session.user.id);
-        if (!user.pterodactylUserId) {
+        const user = await User.findById(req.session.user.id).lean();
+        if (!user?.pterodactylUserId) {
             return res.json({ servers: [] });
         }
 
         const servers = await getUserServers(user.pterodactylUserId);
         res.json({ servers });
     } catch (error) {
-        console.error('Get servers error:', error);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Get servers error:', error.message);
+        res.status(500).json({ error: 'Failed to get servers' });
     }
 });
 
 // API route to get nests
 app.get('/api/nests', async (req, res) => {
-    if (!req.session.user) {
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
     try {
-        console.log('Fetching nests from Pterodactyl API...');
         const response = await pterodactylAPI.get('/nests');
-        console.log('Nests API response status:', response.status);
-        console.log('Nests count:', response.data.data?.length || 0);
-        
         res.json({ nests: response.data.data || [] });
     } catch (error) {
-        console.error('Error fetching nests:', error.response?.status, error.response?.data || error.message);
-        if (error.response?.status === 401) {
-            res.status(500).json({ error: 'Pterodactyl API authentication failed' });
-        } else {
-            res.status(500).json({ error: 'Failed to fetch server nests' });
-        }
+        console.error('Nests error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch server types' });
     }
 });
 
 // API route to get eggs for a specific nest
 app.get('/api/nests/:nestId/eggs', async (req, res) => {
-    if (!req.session.user) {
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
     try {
         const { nestId } = req.params;
-        console.log(`Fetching eggs for nest ${nestId}...`);
-        
         const response = await pterodactylAPI.get(`/nests/${nestId}/eggs`);
-        console.log('Eggs API response status:', response.status);
-        console.log('Eggs count:', response.data.data?.length || 0);
-        
         res.json({ eggs: response.data.data || [] });
     } catch (error) {
-        console.error('Error fetching eggs:', error.response?.status, error.response?.data || error.message);
-        res.status(500).json({ error: 'Failed to fetch server types' });
+        console.error('Eggs error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch server options' });
     }
 });
 
@@ -434,87 +450,70 @@ app.get('/api/nests/:nestId/eggs', async (req, res) => {
 
 // API route to get user resource limits
 app.get('/api/user-limits', async (req, res) => {
-    if (!req.session.user) {
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    try {
-        const limits = {
-            maxMemory: 2048,  // 2GB RAM
-            maxCpu: 100,      // 100% CPU
-            maxDisk: 5120,    // 5GB Disk
-            minMemory: 512,   // 512MB minimum
-            minCpu: 25,       // 25% minimum
-            minDisk: 1024,    // 1GB minimum
-            maxServers: 2     // Maximum servers
-        };
-        
-        res.json({ limits });
-    } catch (error) {
-        console.error('Error fetching user limits:', error);
-        res.status(500).json({ error: 'Failed to fetch user limits' });
-    }
+    const limits = {
+        maxMemory: 2048,
+        maxCpu: 100,
+        maxDisk: 5120,
+        minMemory: 512,
+        minCpu: 25,
+        minDisk: 1024,
+        maxServers: 2
+    };
+    
+    res.json({ limits });
 });
 
 // API route to get resource usage
 app.get('/api/resource-usage', async (req, res) => {
-    if (!req.session.user) {
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
     try {
-        const user = await User.findById(req.session.user.id);
+        const user = await User.findById(req.session.user.id).lean();
         
-        // Get user's purchased resources
-        let userResources = await UserResources.findOne({ userId: user._id });
+        let userResources = await UserResources.findOne({ userId: user._id }).lean();
         if (!userResources) {
-            userResources = new UserResources({ userId: user._id });
-            await userResources.save();
+            userResources = {
+                availableRam: 2048,
+                availableCpu: 100,
+                availableDisk: 5120,
+                serverSlots: 2
+            };
         }
         
-        // Calculate allocated resources from servers
-        let allocatedMemory = 0, allocatedCpu = 0, allocatedDisk = 0;
-        let serverCount = 0;
+        let allocatedMemory = 0, allocatedCpu = 0, allocatedDisk = 0, serverCount = 0;
         
         if (user.pterodactylUserId) {
             const servers = await getUserServers(user.pterodactylUserId);
             serverCount = servers.length;
             
             servers.forEach(server => {
-                allocatedMemory += server.attributes.limits.memory; // MB
-                allocatedCpu += server.attributes.limits.cpu; // %
-                allocatedDisk += server.attributes.limits.disk; // MB
+                allocatedMemory += server.attributes.limits.memory;
+                allocatedCpu += server.attributes.limits.cpu;
+                allocatedDisk += server.attributes.limits.disk;
             });
         }
-        
-        // Total available = base + purchased
-        const totalMemory = userResources.availableRam; // Already includes base + purchased
-        const totalCpu = userResources.availableCpu; // Already includes base + purchased  
-        const totalDisk = userResources.availableDisk; // Already includes base + purchased
-        const totalSlots = userResources.serverSlots; // Already includes base + purchased
 
         res.json({
-            memory: { used: allocatedMemory, total: totalMemory }, // In MB
-            cpu: { used: allocatedCpu, total: totalCpu }, // In percentage
-            disk: { used: allocatedDisk, total: totalDisk }, // In MB
-            slots: { used: serverCount, total: totalSlots } // Server slots
+            memory: { used: allocatedMemory, total: userResources.availableRam },
+            cpu: { used: allocatedCpu, total: userResources.availableCpu },
+            disk: { used: allocatedDisk, total: userResources.availableDisk },
+            slots: { used: serverCount, total: userResources.serverSlots }
         });
     } catch (error) {
-        console.error('Error fetching resource usage:', error);
-        res.status(500).json({ error: 'Failed to fetch resource usage' });
+        console.error('Resource usage error:', error.message);
+        res.status(500).json({ error: 'Failed to get resource usage' });
     }
 });
 
 // API route to create server
 app.post('/api/create-server', async (req, res) => {
-    console.log('Session check:', {
-        sessionExists: !!req.session,
-        userInSession: !!req.session?.user,
-        username: req.session?.user?.username
-    });
-    
-    if (!req.session || !req.session.user) {
-        console.log('❌ No authenticated user for server creation');
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
@@ -921,7 +920,7 @@ app.post('/api/create-server', async (req, res) => {
 
 // API route to delete server
 app.post('/api/delete-server', async (req, res) => {
-    if (!req.session || !req.session.user) {
+    if (!req.isAuthenticated()) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
@@ -2094,18 +2093,44 @@ app.post('/api/admin/create-user', checkAdmin, async (req, res) => {
     }
 });
 
-// Debug route to list users
-app.get('/api/debug/users', async (req, res) => {
+// Quick user creation for admins
+app.post('/api/quick-user', async (req, res) => {
+    const { username, password, adminKey } = req.body;
+    
+    // Simple admin check
+    if (adminKey !== 'blazenode2025') {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
     try {
-        const users = await User.find({}).select('username password coins createdBy pterodactylUserId serverCount');
-        res.json({ 
-            users, 
-            count: users.length,
-            dbState: mongoose.connection.readyState,
-            dbName: mongoose.connection.db?.databaseName
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password required' });
+        }
+        
+        const existingUser = await User.findOne({ username: username.trim() });
+        if (existingUser) {
+            return res.json({ success: true, message: 'User already exists', username });
+        }
+        
+        const newUser = new User({
+            username: username.trim(),
+            password: password.trim(),
+            coins: 1000,
+            serverCount: 0,
+            createdBy: 'quick-create'
         });
+        
+        await newUser.save();
+        
+        res.json({ 
+            success: true, 
+            message: 'User created successfully',
+            username: newUser.username,
+            password: password.trim()
+        });
+        
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Failed to create user' });
     }
 });
 
@@ -2254,78 +2279,88 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Test login endpoint
-app.post('/api/test-login', async (req, res) => {
-    console.log('\n=== TEST LOGIN ENDPOINT ===');
-    console.log('Request body:', req.body);
-    console.log('Headers:', req.headers);
-    console.log('Session:', req.session);
+// User registration endpoint
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
+    
+    console.log(`\n🔐 REGISTER [${new Date().toISOString()}] User: ${username}`);
     
     try {
-        const { username, password } = req.body;
-        
-        if (username === 'test' && password === 'test') {
-            req.session.user = {
-                id: 'test-id',
-                username: 'test',
-                coins: 1000
-            };
-            
-            req.session.save((err) => {
-                if (err) {
-                    console.error('Session save error:', err);
-                    return res.status(500).json({ error: 'Session error' });
-                }
-                
-                console.log('Test session created:', req.session.user);
-                res.json({ success: true, message: 'Test login successful', user: req.session.user });
-            });
-        } else {
-            res.status(401).json({ error: 'Invalid test credentials' });
+        // 1. Input validation
+        if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ error: 'Username and password are required' });
         }
+
+        const cleanUsername = username.trim();
+        const cleanPassword = password.trim();
+
+        if (cleanUsername.length < 3 || cleanPassword.length < 3) {
+            return res.status(400).json({ error: 'Username and password must be at least 3 characters' });
+        }
+
+        if (cleanUsername.length > 20 || cleanPassword.length > 50) {
+            return res.status(400).json({ error: 'Username or password too long' });
+        }
+
+        // 2. Database check
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        }
+
+        // 3. Check if user exists
+        const existingUser = await User.findOne({ username: cleanUsername }).lean();
+        if (existingUser) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+
+        // 4. Create new user
+        const newUser = new User({
+            username: cleanUsername,
+            password: cleanPassword,
+            coins: 100,
+            serverCount: 0,
+            createdBy: 'web-registration'
+        });
+
+        await newUser.save();
+        
+        console.log(`✅ USER REGISTERED: ${cleanUsername}`);
+        
+        res.json({ 
+            success: true, 
+            message: 'Account created successfully! You can now login.',
+            username: cleanUsername
+        });
+        
     } catch (error) {
-        console.error('Test login error:', error);
-        res.status(500).json({ error: 'Test failed' });
+        console.error('Registration error:', error.message);
+        
+        if (error.code === 11000) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        
+        res.status(500).json({ error: 'Registration failed, please try again' });
     }
 });
 
-// Debug route to test database connection
-app.get('/api/debug/dbtest', async (req, res) => {
+// System status endpoint
+app.get('/api/status', async (req, res) => {
     try {
         const dbState = mongoose.connection.readyState;
-        const states = {
-            0: 'Disconnected',
-            1: 'Connected', 
-            2: 'Connecting',
-            3: 'Disconnecting'
-        };
-        
-        const userCount = await User.countDocuments();
-        const sampleUser = await User.findOne({});
+        const userCount = await User.countDocuments().maxTimeMS(2000);
         
         res.json({
             status: 'OK',
-            database: {
-                state: states[dbState],
-                stateCode: dbState,
-                name: mongoose.connection.db?.databaseName,
-                host: mongoose.connection.host,
-                port: mongoose.connection.port
-            },
-            users: {
-                total: userCount,
-                sample: sampleUser ? {
-                    username: sampleUser.username,
-                    id: sampleUser._id,
-                    createdAt: sampleUser.createdAt
-                } : null
-            },
+            database: dbState === 1 ? 'Connected' : 'Disconnected',
+            users: userCount,
+            uptime: process.uptime(),
+            memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
             timestamp: new Date().toISOString()
         });
     } catch (error) {
         res.status(500).json({ 
             status: 'ERROR',
-            error: error.message,
+            error: 'System check failed',
             timestamp: new Date().toISOString()
         });
     }
@@ -2333,11 +2368,16 @@ app.get('/api/debug/dbtest', async (req, res) => {
 
 // Logout route
 app.post('/api/logout', (req, res) => {
+    const username = req.session?.user?.username || 'unknown';
+    
     req.session.destroy((err) => {
         if (err) {
-            console.error('Session destroy error:', err);
+            console.error('Logout error:', err);
+            return res.status(500).json({ error: 'Logout failed' });
         }
-        res.json({ success: true });
+        
+        console.log(`🚪 LOGOUT: ${username}`);
+        res.json({ success: true, message: 'Logged out successfully' });
     });
 });
 

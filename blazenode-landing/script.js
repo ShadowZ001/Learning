@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.documentElement.style.scrollBehavior = 'smooth';
     
     // Add loading states to form
-    const form = document.getElementById('loginForm');
-    const loginBtn = form.querySelector('.login-btn');
+    const form = document.getElementById('authForm');
+    const authBtn = form.querySelector('.auth-btn');
     
     // Add focus effects to inputs
     const inputs = form.querySelectorAll('input');
@@ -47,30 +47,71 @@ function initAnimations() {
     });
 }
 
-// Handle login form submission
-async function handleLogin(event) {
+// Global auth mode state
+let isLoginMode = true;
+
+// Toggle between login and register modes
+function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    const authBtn = document.querySelector('.auth-btn');
+    const authTitle = document.getElementById('authTitle');
+    const authSubtitle = document.getElementById('authSubtitle');
+    const switchBtn = document.querySelector('.switch-btn');
+    const btnText = authBtn.querySelector('.btn-text');
+    const switchText = switchBtn.parentElement;
+    
+    if (isLoginMode) {
+        authTitle.textContent = 'Welcome Back';
+        authSubtitle.textContent = 'Sign in to access your game servers and manage your resources';
+        btnText.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+        switchText.innerHTML = 'Don\'t have an account? <button type="button" onclick="toggleAuthMode()" class="switch-btn">Create Account</button>';
+        authBtn.className = 'auth-btn login-mode';
+    } else {
+        authTitle.textContent = 'Create Account';
+        authSubtitle.textContent = 'Join BlazeNode and get your free game servers today';
+        btnText.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+        switchText.innerHTML = 'Already have an account? <button type="button" onclick="toggleAuthMode()" class="switch-btn">Sign In</button>';
+        authBtn.className = 'auth-btn register-mode';
+    }
+}
+
+// Handle authentication (login/register)
+async function handleAuth(event) {
     event.preventDefault();
     
     const form = event.target;
-    const loginBtn = form.querySelector('.login-btn');
+    const authBtn = form.querySelector('.auth-btn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const username = form.username.value.trim();
     const password = form.password.value.trim();
     
-    // Validation
+    // Enhanced validation
     if (!username || !password) {
         showNotification('Please fill in all fields', 'error');
         return;
     }
     
+    if (username.length < 3) {
+        showNotification('Username must be at least 3 characters', 'error');
+        return;
+    }
+    
+    if (password.length < 3) {
+        showNotification('Password must be at least 3 characters', 'error');
+        return;
+    }
+    
     // Show loading state
-    loginBtn.classList.add('loading');
-    loginBtn.disabled = true;
+    authBtn.classList.add('loading');
+    authBtn.disabled = true;
     
     try {
-        console.log('🔐 Attempting login for:', username);
+        const endpoint = isLoginMode ? '/api/login' : '/api/register';
+        const action = isLoginMode ? 'login' : 'registration';
         
-        const response = await fetch('/api/login', {
+        console.log(`🔐 Attempting ${action} for:`, username);
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -80,40 +121,59 @@ async function handleLogin(event) {
             body: JSON.stringify({ username, password })
         });
         
-        console.log('Login response status:', response.status);
         const data = await response.json();
-        console.log('Login response data:', data);
+        console.log(`${action} response:`, response.status, data);
         
         if (response.ok && data.success) {
-            // Show success animation
-            showNotification('Login successful! Redirecting...', 'success');
-            
-            // Show loading overlay
-            loadingOverlay.classList.add('active');
-            
-            // Redirect after animation
-            setTimeout(() => {
-                window.location.href = '/dashboard.html';
-            }, 1500);
+            if (isLoginMode) {
+                // Login success
+                showNotification('Login successful! Redirecting...', 'success');
+                loadingOverlay.classList.add('active');
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 1500);
+            } else {
+                // Registration success
+                showNotification('Account created! You can now sign in.', 'success');
+                
+                // Switch to login mode
+                setTimeout(() => {
+                    toggleAuthMode();
+                    form.username.value = username;
+                    form.password.value = '';
+                    form.password.focus();
+                }, 1500);
+            }
         } else {
-            // Show error
-            showNotification(data.error || 'Login failed', 'error');
+            // Handle specific errors
+            let errorMessage = data.error || `${action} failed`;
             
-            // Add shake animation to form
+            if (response.status === 409) {
+                errorMessage = 'Username already exists. Try a different one.';
+            } else if (response.status === 401) {
+                errorMessage = 'Invalid username or password.';
+            } else if (response.status === 503) {
+                errorMessage = 'Service temporarily unavailable. Please try again.';
+            }
+            
+            showNotification(errorMessage, 'error');
+            
+            // Add shake animation
             form.classList.add('shake');
             setTimeout(() => form.classList.remove('shake'), 500);
         }
     } catch (error) {
-        console.error('Login error:', error);
-        showNotification('Connection error. Please try again.', 'error');
+        console.error(`${isLoginMode ? 'Login' : 'Registration'} error:`, error);
+        showNotification('Connection error. Please check your internet and try again.', 'error');
         
-        // Add shake animation to form
+        // Add shake animation
         form.classList.add('shake');
         setTimeout(() => form.classList.remove('shake'), 500);
     } finally {
         // Remove loading state
-        loginBtn.classList.remove('loading');
-        loginBtn.disabled = false;
+        authBtn.classList.remove('loading');
+        authBtn.disabled = false;
     }
 }
 
@@ -218,6 +278,30 @@ style.textContent = `
         box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
     }
     
+    .switch-btn {
+        background: none;
+        border: none;
+        color: #ff6b35;
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: 500;
+    }
+    
+    .switch-btn:hover {
+        color: #f7931e;
+    }
+    
+    .auth-switch {
+        text-align: center;
+        margin-top: 20px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .auth-switch p {
+        margin: 0;
+        font-size: 14px;
+    }
+    
     /* Smooth transitions for all interactive elements */
     * {
         transition: all 0.3s ease;
@@ -261,7 +345,7 @@ document.addEventListener('mousemove', function(e) {
 
 // Add click ripple effect to buttons
 document.addEventListener('click', function(e) {
-    if (e.target.matches('.login-btn, .feature-card')) {
+    if (e.target.matches('.auth-btn, .feature-card')) {
         const ripple = document.createElement('span');
         const rect = e.target.getBoundingClientRect();
         const size = Math.max(rect.width, rect.height);
