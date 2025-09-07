@@ -47,7 +47,7 @@ function initAnimations() {
     });
 }
 
-// Handle login form submission
+// Simple and reliable login function
 async function handleLogin(event) {
     event.preventDefault();
     
@@ -57,9 +57,9 @@ async function handleLogin(event) {
     const username = form.username.value.trim();
     const password = form.password.value.trim();
     
-    // Validation
+    // Basic validation
     if (!username || !password) {
-        showNotification('Please fill in all fields', 'error');
+        showNotification('Please enter username and password', 'error');
         return;
     }
     
@@ -68,13 +68,12 @@ async function handleLogin(event) {
     loginBtn.disabled = true;
     
     try {
-        console.log('🔐 Attempting login for:', username);
+        console.log('🔐 Login attempt:', username);
         
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Content-Type': 'application/json'
             },
             credentials: 'include',
             body: JSON.stringify({ username, password })
@@ -87,22 +86,16 @@ async function handleLogin(event) {
             showNotification('Login successful! Redirecting...', 'success');
             loadingOverlay.classList.add('active');
             
+            // Redirect to dashboard
             setTimeout(() => {
                 window.location.href = '/dashboard.html';
-            }, 1500);
+            }, 1000);
         } else {
-            // Handle specific errors
-            let errorMessage = data.error || 'Login failed';
-            
-            if (response.status === 401) {
-                errorMessage = 'Invalid username or password';
-            } else if (response.status === 503) {
-                errorMessage = 'Service temporarily unavailable. Please try again.';
-            }
-            
+            // Show error message
+            const errorMessage = data.error || 'Login failed';
             showNotification(errorMessage, 'error');
             
-            // Add shake animation
+            // Shake animation
             form.classList.add('shake');
             setTimeout(() => form.classList.remove('shake'), 500);
         }
@@ -110,7 +103,7 @@ async function handleLogin(event) {
         console.error('Login error:', error);
         showNotification('Connection error. Please try again.', 'error');
         
-        // Add shake animation
+        // Shake animation
         form.classList.add('shake');
         setTimeout(() => form.classList.remove('shake'), 500);
     } finally {
@@ -221,6 +214,47 @@ style.textContent = `
         box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
     }
     
+    .demo-accounts {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .demo-text {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 12px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .demo-list {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .demo-account {
+        background: rgba(255, 107, 53, 0.1);
+        color: #ff6b35;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-family: monospace;
+        border: 1px solid rgba(255, 107, 53, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .demo-account:hover {
+        background: rgba(255, 107, 53, 0.2);
+        transform: scale(1.05);
+    }
+    
 
     
     /* Smooth transitions for all interactive elements */
@@ -247,6 +281,18 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Demo account click to fill form
+document.addEventListener('click', function(e) {
+    if (e.target.matches('.demo-account')) {
+        const credentials = e.target.textContent.split('/');
+        if (credentials.length === 2) {
+            document.getElementById('username').value = credentials[0];
+            document.getElementById('password').value = credentials[1];
+            showNotification('Demo credentials filled! Click Sign In.', 'info');
+        }
+    }
+});
 
 // Add some interactive effects
 document.addEventListener('mousemove', function(e) {
