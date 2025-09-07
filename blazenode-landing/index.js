@@ -2279,69 +2279,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// User registration endpoint
-app.post('/api/register', async (req, res) => {
-    const { username, password } = req.body;
-    
-    console.log(`\n🔐 REGISTER [${new Date().toISOString()}] User: ${username}`);
-    
-    try {
-        // 1. Input validation
-        if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
-            return res.status(400).json({ error: 'Username and password are required' });
-        }
 
-        const cleanUsername = username.trim();
-        const cleanPassword = password.trim();
-
-        if (cleanUsername.length < 3 || cleanPassword.length < 3) {
-            return res.status(400).json({ error: 'Username and password must be at least 3 characters' });
-        }
-
-        if (cleanUsername.length > 20 || cleanPassword.length > 50) {
-            return res.status(400).json({ error: 'Username or password too long' });
-        }
-
-        // 2. Database check
-        if (mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ error: 'Database unavailable' });
-        }
-
-        // 3. Check if user exists
-        const existingUser = await User.findOne({ username: cleanUsername }).lean();
-        if (existingUser) {
-            return res.status(409).json({ error: 'Username already exists' });
-        }
-
-        // 4. Create new user
-        const newUser = new User({
-            username: cleanUsername,
-            password: cleanPassword,
-            coins: 100,
-            serverCount: 0,
-            createdBy: 'web-registration'
-        });
-
-        await newUser.save();
-        
-        console.log(`✅ USER REGISTERED: ${cleanUsername}`);
-        
-        res.json({ 
-            success: true, 
-            message: 'Account created successfully! You can now login.',
-            username: cleanUsername
-        });
-        
-    } catch (error) {
-        console.error('Registration error:', error.message);
-        
-        if (error.code === 11000) {
-            return res.status(409).json({ error: 'Username already exists' });
-        }
-        
-        res.status(500).json({ error: 'Registration failed, please try again' });
-    }
-});
 
 // System status endpoint
 app.get('/api/status', async (req, res) => {
