@@ -14,21 +14,36 @@ const app = express();
 
 console.log('Starting BlazeNode Dashboard Server...');
 
-// MongoDB connection with better error handling
+// Robust MongoDB connection
 let mongoConnected = false;
 
-mongoose.connect(config.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-}).then(() => {
-    mongoConnected = true;
-    console.log('✅ MongoDB connected successfully');
-}).catch((error) => {
-    console.error('❌ MongoDB connection failed:', error.message);
-    mongoConnected = false;
-});
+async function ensureMongoConnection() {
+    if (mongoose.connection.readyState === 1) {
+        mongoConnected = true;
+        return true;
+    }
+    
+    try {
+        await mongoose.connect(config.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 15000,
+            socketTimeoutMS: 45000,
+            maxPoolSize: 10,
+            bufferCommands: false,
+            bufferMaxEntries: 0
+        });
+        mongoConnected = true;
+        return true;
+    } catch (error) {
+        console.error('❌ MongoDB connection failed:', error.message);
+        mongoConnected = false;
+        return false;
+    }
+}
+
+// Initial connection
+ensureMongoConnection();
 
 mongoose.connection.on('connected', () => {
     mongoConnected = true;
@@ -174,75 +189,66 @@ async function getUserServers(pterodactylUserId) {
     }
 }
 
-// Fixed login system for all users
+// Bulletproof login system
 app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
     
     console.log('🔐 LOGIN ATTEMPT:', username);
     
-    // Input validation
+    // Strict input validation and normalization
     if (!username || !password) {
         return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const cleanUsername = String(username).trim().toLowerCase();
-    const cleanPassword = String(password).trim();
+    // Normalize inputs - remove all whitespace and convert to lowercase
+    const cleanUsername = String(username).replace(/\s+/g, '').toLowerCase();
+    const cleanPassword = String(password).replace(/^\s+|\s+$/g, ''); // Only trim, don't remove internal spaces
 
     if (!cleanUsername || !cleanPassword) {
         return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     try {
-        // Ensure database connection
-        if (mongoose.connection.readyState !== 1) {
-            console.log('🔄 Connecting to database...');
-            await mongoose.connect(config.MONGODB_URI, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-                serverSelectionTimeoutMS: 10000,
-                socketTimeoutMS: 45000,
-            });
-            mongoConnected = true;
-        }
-
-        // Find user in database
-        console.log('🔍 Searching for user:', cleanUsername);
-        const user = await User.findOne({ 
-            username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
-            password: cleanPassword
-        }).maxTimeMS(10000);
-        
-        if (!user) {
-            console.log('❌ User not found:', cleanUsername);
+        // Ensure database connection with retry
+        const connected = await ensureMongoConnection();
+        if (!connected) {
+            console.log('❌ Database connection failed');
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        console.log('✅ User found:', user.username);
-
-        // Create or update Pterodactyl user if needed
-        if (!user.pterodactylUserId) {
-            try {
-                console.log('Creating Pterodactyl account for:', user.username);
-                const pterodactylUserId = await createPterodactylUser(user.username);
-                if (pterodactylUserId) {
-                    user.pterodactylUserId = pterodactylUserId;
-                    await user.save();
-                    console.log('✅ Pterodactyl account created:', pterodactylUserId);
-                }
-            } catch (pterodactylError) {
-                console.log('⚠️ Pterodactyl creation failed:', pterodactylError.message);
-            }
+        // Multiple search strategies for maximum compatibility
+        let user = null;
+        
+        // Strategy 1: Exact match (case insensitive)
+        user = await User.findOne({ 
+            username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
+            password: cleanPassword
+        }).maxTimeMS(15000);
+        
+        // Strategy 2: If not found, try exact case match
+        if (!user) {
+            user = await User.findOne({ 
+                username: cleanUsername,
+                password: cleanPassword
+            }).maxTimeMS(15000);
+        }
+        
+        // Strategy 3: Try original username (in case it has different casing)
+        if (!user && username !== cleanUsername) {
+            user = await User.findOne({ 
+                username: { $regex: new RegExp(`^${username.trim()}$`, 'i') },
+                password: cleanPassword
+            }).maxTimeMS(15000);
+        }
+        
+        if (!user) {
+            console.log('❌ User not found for:', cleanUsername);
+            return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // Update last login
-        try {
-            user.lastLogin = new Date();
-            await user.save();
-        } catch (saveError) {
-            console.log('⚠️ Save failed:', saveError.message);
-        }
+        console.log('✅ User authenticated:', user.username);
 
-        // Create session
+        // Create session immediately (don't wait for Pterodactyl)
         const sessionData = {
             id: user._id,
             username: user.username,
@@ -253,6 +259,26 @@ app.post('/api/login', async (req, res) => {
 
         req.session.user = sessionData;
         
+        // Background tasks (don't block login)
+        setImmediate(async () => {
+            try {
+                // Create Pterodactyl user if needed
+                if (!user.pterodactylUserId) {
+                    const pterodactylUserId = await createPterodactylUser(user.username);
+                    if (pterodactylUserId) {
+                        user.pterodactylUserId = pterodactylUserId;
+                        await user.save();
+                    }
+                }
+                
+                // Update last login
+                user.lastLogin = new Date();
+                await user.save();
+            } catch (bgError) {
+                console.log('⚠️ Background task failed:', bgError.message);
+            }
+        });
+        
         console.log('✅ LOGIN SUCCESS:', user.username);
         
         res.json({ 
@@ -262,7 +288,6 @@ app.post('/api/login', async (req, res) => {
         
     } catch (error) {
         console.error('❌ LOGIN ERROR:', error.message);
-        console.error('❌ Error details:', error);
         return res.status(401).json({ error: 'Invalid username or password' });
     }
 });
