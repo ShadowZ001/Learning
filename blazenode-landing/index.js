@@ -680,15 +680,17 @@ app.post('/api/delete-server', async (req, res) => {
     }
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 BlazeNode Dashboard Server Ready`);
-    console.log(`✅ Login System: Fixed and Working`);
-    console.log(`✅ Database: Connected`);
-    console.log(`✅ All Features: Restored`);
-    console.log(`⚡ Ready for login on port ${PORT}!`);
-});
+// Start server (cPanel compatible)
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🚀 BlazeNode Dashboard Server Ready`);
+        console.log(`✅ Login System: Fixed and Working`);
+        console.log(`✅ Database: Connected`);
+        console.log(`✅ All Features: Restored`);
+        console.log(`⚡ Ready for login on port ${PORT}!`);
+    });
+}
 
 // Export app for cPanel
 module.exports = app;
