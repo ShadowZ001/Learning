@@ -1,28 +1,28 @@
 // Configuration file for BlazeNode Dashboard
-// Replace .env file for cPanel compatibility
+// REPLACE THESE VALUES FOR YOUR CPANEL DEPLOYMENT
 
 module.exports = {
-    // Database Configuration
-    MONGODB_URI: 'mongodb+srv://subhasish824988_db_user:blazenode@cluster0.ngqj9vt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+    // Database Configuration - REPLACE WITH YOUR MONGODB
+    MONGODB_URI: 'YOUR_MONGODB_CONNECTION_STRING',
     
-    // Session Configuration
-    SESSION_SECRET: 'blazenode_secret_key_2025',
+    // Session Configuration - REPLACE WITH RANDOM SECRET
+    SESSION_SECRET: 'YOUR_RANDOM_SESSION_SECRET_KEY',
     
-    // Pterodactyl Panel Configuration
-    PTERODACTYL_API_KEY: 'ptla_Q1aRhsnRiJ8PQEErS3IiknCuuAG1zdueM1OVck39LMN',
-    PTERODACTYL_URL: 'https://panel.blazenode.site',
+    // Pterodactyl Panel Configuration - REPLACE WITH YOUR PANEL
+    PTERODACTYL_API_KEY: 'YOUR_PTERODACTYL_API_KEY',
+    PTERODACTYL_URL: 'https://YOUR_PANEL_DOMAIN.com',
     
-    // Bot API Configuration
-    BOT_API_KEY: 'blazenode-bot-api-key-2025',
+    // Bot API Configuration - REPLACE WITH YOUR BOT TOKEN
+    BOT_API_KEY: 'YOUR_DISCORD_BOT_TOKEN',
     
-    // Discord OAuth2 Configuration
+    // Discord OAuth2 Configuration - UPDATE REDIRECT_URI TO YOUR DOMAIN
     DISCORD_CLIENT_ID: '1414622141705617583',
     DISCORD_CLIENT_SECRET: 'lwXQLgJdLy844a1ejcTwjhzUwH4MqDh',
-    DISCORD_REDIRECT_URI: 'https://dash.blazenode.site/auth/callback',
+    DISCORD_REDIRECT_URI: 'https://YOUR_DOMAIN.com/auth/callback',
     DISCORD_GUILD_ID: '1413789539350118020',
     DISCORD_INVITE_LINK: 'https://discord.gg/PyfEzq5gQ',
     
-    // Admin Configuration
+    // Admin Configuration - KEEP THIS EMAIL
     ADMIN_EMAIL: 'mailtocedrickh8@gmail.com',
     
     // Environment
