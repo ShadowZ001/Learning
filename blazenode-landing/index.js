@@ -14,18 +14,35 @@ const app = express();
 
 console.log('Starting BlazeNode Dashboard Server...');
 
-// MongoDB connection - don't block on errors
+// MongoDB connection with better error handling
+let mongoConnected = false;
+
 mongoose.connect(config.MONGODB_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
-}).catch(() => {});
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+}).then(() => {
+    mongoConnected = true;
+    console.log('✅ MongoDB connected successfully');
+}).catch((error) => {
+    console.error('❌ MongoDB connection failed:', error.message);
+    mongoConnected = false;
+});
 
 mongoose.connection.on('connected', () => {
+    mongoConnected = true;
     console.log('✅ MongoDB connected');
 });
 
-mongoose.connection.on('error', () => {
-    console.log('⚠️ MongoDB error (continuing anyway)');
+mongoose.connection.on('error', (error) => {
+    mongoConnected = false;
+    console.log('⚠️ MongoDB error:', error.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+    mongoConnected = false;
+    console.log('⚠️ MongoDB disconnected');
 });
 
 // Pterodactyl API configuration
@@ -177,16 +194,34 @@ app.post('/api/login', async (req, res) => {
 
     try {
         // Check database connection
-        if (mongoose.connection.readyState !== 1) {
-            console.log('❌ Database not connected');
-            return res.status(401).json({ error: 'Invalid username or password' });
+        console.log('🔍 DB State:', mongoose.connection.readyState, 'Connected:', mongoConnected);
+        
+        if (!mongoConnected || mongoose.connection.readyState !== 1) {
+            console.log('❌ Database not connected, attempting reconnection...');
+            try {
+                await mongoose.connect(config.MONGODB_URI, {
+                    useNewUrlParser: true,
+                    useUnifiedTopology: true,
+                    serverSelectionTimeoutMS: 5000
+                });
+                mongoConnected = true;
+                console.log('✅ Database reconnected');
+            } catch (reconnectError) {
+                console.error('❌ Reconnection failed:', reconnectError.message);
+                return res.status(401).json({ error: 'Invalid username or password' });
+            }
         }
         
-        // Find user in database
-        const user = await User.findOne({ 
-            username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
-            password: cleanPassword
-        });
+        // Find user in database with timeout
+        const user = await Promise.race([
+            User.findOne({ 
+                username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
+                password: cleanPassword
+            }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Database timeout')), 10000)
+            )
+        ]);
         
         if (!user) {
             console.log('❌ Invalid credentials for:', cleanUsername);
@@ -297,6 +332,39 @@ app.get('/api/health', async (req, res) => {
     }
     
     res.json(healthData);
+});
+
+// Debug endpoint for cPanel
+app.get('/api/debug', async (req, res) => {
+    const debug = {
+        timestamp: new Date().toISOString(),
+        mongodb: {
+            uri: config.MONGODB_URI ? 'Present' : 'Missing',
+            state: mongoose.connection.readyState,
+            connected: mongoConnected,
+            states: {
+                0: 'disconnected',
+                1: 'connected', 
+                2: 'connecting',
+                3: 'disconnecting'
+            }
+        },
+        environment: {
+            nodeEnv: process.env.NODE_ENV,
+            port: process.env.PORT
+        }
+    };
+    
+    try {
+        const testUser = await User.findOne({}).limit(1);
+        debug.mongodb.testQuery = 'SUCCESS';
+        debug.mongodb.userCount = await User.countDocuments();
+    } catch (error) {
+        debug.mongodb.testQuery = 'FAILED';
+        debug.mongodb.error = error.message;
+    }
+    
+    res.json(debug);
 });
 
 // Status endpoint with full system check
