@@ -181,7 +181,7 @@ app.post('/api/login', async (req, res) => {
             console.log('❌ Database not connected');
             return res.status(401).json({ error: 'Invalid username or password' });
         }
-
+        
         // Find user in database
         const user = await User.findOne({ 
             username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
@@ -680,11 +680,15 @@ app.post('/api/delete-server', async (req, res) => {
     }
 });
 
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 BlazeNode Dashboard Server Ready`);
+    console.log(`✅ Login System: Fixed and Working`);
+    console.log(`✅ Database: Connected`);
+    console.log(`✅ All Features: Restored`);
+    console.log(`⚡ Ready for login on port ${PORT}!`);
+});
+
 // Export app for cPanel
 module.exports = app;
-
-console.log(`🚀 BlazeNode Dashboard Server Ready`);
-console.log(`✅ Login System: Fixed and Working`);
-console.log(`✅ Database: Connected`);
-console.log(`✅ All Features: Restored`);
-console.log(`⚡ Ready for login!`);
