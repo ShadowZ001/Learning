@@ -47,69 +47,44 @@ function initAnimations() {
     });
 }
 
-// Simple and reliable login function
+// Simple login function
 async function handleLogin(event) {
     event.preventDefault();
     
     const form = event.target;
     const loginBtn = form.querySelector('.login-btn');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const username = form.username.value.trim();
-    const password = form.password.value.trim();
+    const username = form.username.value;
+    const password = form.password.value;
     
-    // Basic validation
     if (!username || !password) {
         showNotification('Please enter username and password', 'error');
         return;
     }
     
-    // Show loading state
-    loginBtn.classList.add('loading');
     loginBtn.disabled = true;
+    loginBtn.textContent = 'Logging in...';
     
     try {
-        console.log('🔐 Login attempt:', username);
-        
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ username, password })
         });
         
         const data = await response.json();
-        console.log('Login response:', response.status, data);
         
-        if (response.ok && data.success) {
-            showNotification('Login successful! Redirecting...', 'success');
-            loadingOverlay.classList.add('active');
-            
-            // Redirect to dashboard
-            setTimeout(() => {
-                window.location.href = '/dashboard.html';
-            }, 1000);
+        if (data.success) {
+            showNotification('Login successful!', 'success');
+            window.location.href = '/dashboard.html';
         } else {
-            // Show error message
-            const errorMessage = data.error || 'Login failed';
-            showNotification(errorMessage, 'error');
-            
-            // Shake animation
-            form.classList.add('shake');
-            setTimeout(() => form.classList.remove('shake'), 500);
+            showNotification(data.error || 'Login failed', 'error');
         }
     } catch (error) {
-        console.error('Login error:', error);
-        showNotification('Connection error. Please try again.', 'error');
-        
-        // Shake animation
-        form.classList.add('shake');
-        setTimeout(() => form.classList.remove('shake'), 500);
+        showNotification('Connection error', 'error');
     } finally {
-        // Remove loading state
-        loginBtn.classList.remove('loading');
         loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
     }
 }
 

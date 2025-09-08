@@ -29,9 +29,7 @@ async function ensureMongoConnection() {
             useUnifiedTopology: true,
             serverSelectionTimeoutMS: 15000,
             socketTimeoutMS: 45000,
-            maxPoolSize: 10,
-            bufferCommands: false,
-            bufferMaxEntries: 0
+            maxPoolSize: 10
         });
         mongoConnected = true;
         return true;
@@ -189,101 +187,49 @@ async function getUserServers(pterodactylUserId) {
     }
 }
 
-// Bulletproof login system
+// Simple and reliable login system
 app.post('/api/login', async (req, res) => {
-    let { username, password } = req.body;
+    const { username, password } = req.body;
     
     console.log('🔐 LOGIN ATTEMPT:', username);
     
-    // Strict input validation and normalization
     if (!username || !password) {
         return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    // Normalize inputs - remove all whitespace and convert to lowercase
-    const cleanUsername = String(username).replace(/\s+/g, '').toLowerCase();
-    const cleanPassword = String(password).replace(/^\s+|\s+$/g, ''); // Only trim, don't remove internal spaces
-
-    if (!cleanUsername || !cleanPassword) {
-        return res.status(401).json({ error: 'Invalid username or password' });
-    }
-
     try {
-        // Ensure database connection with retry
-        const connected = await ensureMongoConnection();
-        if (!connected) {
-            console.log('❌ Database connection failed');
-            return res.status(401).json({ error: 'Invalid username or password' });
+        // Ensure database connection
+        if (mongoose.connection.readyState !== 1) {
+            await mongoose.connect(config.MONGODB_URI);
         }
 
-        // Multiple search strategies for maximum compatibility
-        let user = null;
-        
-        // Strategy 1: Exact match (case insensitive)
-        user = await User.findOne({ 
-            username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
-            password: cleanPassword
-        }).maxTimeMS(15000);
-        
-        // Strategy 2: If not found, try exact case match
-        if (!user) {
-            user = await User.findOne({ 
-                username: cleanUsername,
-                password: cleanPassword
-            }).maxTimeMS(15000);
-        }
-        
-        // Strategy 3: Try original username (in case it has different casing)
-        if (!user && username !== cleanUsername) {
-            user = await User.findOne({ 
-                username: { $regex: new RegExp(`^${username.trim()}$`, 'i') },
-                password: cleanPassword
-            }).maxTimeMS(15000);
-        }
+        // Simple direct query - exactly as stored in database
+        const user = await User.findOne({ 
+            username: username.trim(),
+            password: password.trim()
+        });
         
         if (!user) {
-            console.log('❌ User not found for:', cleanUsername);
+            console.log('❌ User not found:', username);
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
         console.log('✅ User authenticated:', user.username);
 
-        // Create session immediately (don't wait for Pterodactyl)
-        const sessionData = {
+        // Create session
+        req.session.user = {
             id: user._id,
             username: user.username,
             coins: user.coins || 100,
             pterodactylUserId: user.pterodactylUserId,
             serverCount: user.serverCount || 0
         };
-
-        req.session.user = sessionData;
-        
-        // Background tasks (don't block login)
-        setImmediate(async () => {
-            try {
-                // Create Pterodactyl user if needed
-                if (!user.pterodactylUserId) {
-                    const pterodactylUserId = await createPterodactylUser(user.username);
-                    if (pterodactylUserId) {
-                        user.pterodactylUserId = pterodactylUserId;
-                        await user.save();
-                    }
-                }
-                
-                // Update last login
-                user.lastLogin = new Date();
-                await user.save();
-            } catch (bgError) {
-                console.log('⚠️ Background task failed:', bgError.message);
-            }
-        });
         
         console.log('✅ LOGIN SUCCESS:', user.username);
         
         res.json({ 
             success: true, 
-            user: sessionData
+            user: req.session.user
         });
         
     } catch (error) {
