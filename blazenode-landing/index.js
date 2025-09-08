@@ -174,7 +174,7 @@ async function getUserServers(pterodactylUserId) {
     }
 }
 
-// Fixed login system - consistent behavior
+// Fixed login system for all users
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -193,57 +193,54 @@ app.post('/api/login', async (req, res) => {
     }
 
     try {
-        // Check database connection
-        console.log('🔍 DB State:', mongoose.connection.readyState, 'Connected:', mongoConnected);
-        
-        if (!mongoConnected || mongoose.connection.readyState !== 1) {
-            console.log('❌ Database not connected, attempting reconnection...');
-            try {
-                await mongoose.connect(config.MONGODB_URI, {
-                    useNewUrlParser: true,
-                    useUnifiedTopology: true,
-                    serverSelectionTimeoutMS: 5000
-                });
-                mongoConnected = true;
-                console.log('✅ Database reconnected');
-            } catch (reconnectError) {
-                console.error('❌ Reconnection failed:', reconnectError.message);
-                return res.status(401).json({ error: 'Invalid username or password' });
-            }
+        // Ensure database connection
+        if (mongoose.connection.readyState !== 1) {
+            console.log('🔄 Connecting to database...');
+            await mongoose.connect(config.MONGODB_URI, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+                serverSelectionTimeoutMS: 10000,
+                socketTimeoutMS: 45000,
+            });
+            mongoConnected = true;
         }
-        
-        // Find user in database with timeout
-        const user = await Promise.race([
-            User.findOne({ 
-                username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
-                password: cleanPassword
-            }),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Database timeout')), 10000)
-            )
-        ]);
+
+        // Find user in database
+        console.log('🔍 Searching for user:', cleanUsername);
+        const user = await User.findOne({ 
+            username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
+            password: cleanPassword
+        }).maxTimeMS(10000);
         
         if (!user) {
-            console.log('❌ Invalid credentials for:', cleanUsername);
+            console.log('❌ User not found:', cleanUsername);
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        console.log('✅ Database user found:', user.username);
+        console.log('✅ User found:', user.username);
 
         // Create or update Pterodactyl user if needed
         if (!user.pterodactylUserId) {
-            console.log('Creating Pterodactyl account for:', user.username);
-            const pterodactylUserId = await createPterodactylUser(user.username);
-            if (pterodactylUserId) {
-                user.pterodactylUserId = pterodactylUserId;
-                await user.save();
-                console.log('✅ Pterodactyl account created:', pterodactylUserId);
+            try {
+                console.log('Creating Pterodactyl account for:', user.username);
+                const pterodactylUserId = await createPterodactylUser(user.username);
+                if (pterodactylUserId) {
+                    user.pterodactylUserId = pterodactylUserId;
+                    await user.save();
+                    console.log('✅ Pterodactyl account created:', pterodactylUserId);
+                }
+            } catch (pterodactylError) {
+                console.log('⚠️ Pterodactyl creation failed:', pterodactylError.message);
             }
         }
 
         // Update last login
-        user.lastLogin = new Date();
-        await user.save();
+        try {
+            user.lastLogin = new Date();
+            await user.save();
+        } catch (saveError) {
+            console.log('⚠️ Save failed:', saveError.message);
+        }
 
         // Create session
         const sessionData = {
@@ -265,6 +262,7 @@ app.post('/api/login', async (req, res) => {
         
     } catch (error) {
         console.error('❌ LOGIN ERROR:', error.message);
+        console.error('❌ Error details:', error);
         return res.status(401).json({ error: 'Invalid username or password' });
     }
 });
