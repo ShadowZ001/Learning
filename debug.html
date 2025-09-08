@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #0a0a0a; color: white; }
+        .container { max-width: 800px; margin: 0 auto; }
+        button { background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; background: #1a1a1a; }
+        .success { border-left: 4px solid #10b981; }
+        .error { border-left: 4px solid #ef4444; }
+        .info { border-left: 4px solid #3b82f6; }
+        pre { background: #111; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BlazeNode Debug Dashboard</h1>
+        
+        <div>
+            <button onclick="testConnection()">Test Connection</button>
+            <button onclick="checkSession()">Check Session</button>
+            <button onclick="testLogin()">Test Login</button>
+            <button onclick="loadDashboard()">Load Dashboard</button>
+            <button onclick="testUserAPI()">Test User API</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5504';
+        
+        async function testConnection() {
+            showResult('Testing connection...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/debug/dbtest`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Connection OK\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult(`❌ Connection Failed\\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Connection Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkSession() {
+            showResult('Checking session...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/user`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Session Valid\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult(`❌ Session Invalid\\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Session Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testLogin() {
+            const username = prompt('Enter username:');
+            const password = prompt('Enter password:');
+            
+            if (!username || !password) return;
+            
+            showResult('Testing login...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ Login Success\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult(`❌ Login Failed\\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Login Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loadDashboard() {
+            showResult('Loading dashboard...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/dashboard.html`, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    showResult('✅ Dashboard loaded successfully', 'success');
+                    window.open(`${API_BASE}/dashboard.html`, '_blank');
+                } else {
+                    showResult(`❌ Dashboard load failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Dashboard Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testUserAPI() {
+            showResult('Testing user API...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/user`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ User API Success\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult(`❌ User API Failed\\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ User API Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showResult(message, type) {
+            const result = document.getElementById('result');
+            result.innerHTML = `<div class="result ${type}"><pre>${message}</pre></div>`;
+        }
+    </script>
+</body>
+</html>
