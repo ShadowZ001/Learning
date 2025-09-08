@@ -157,7 +157,7 @@ async function getUserServers(pterodactylUserId) {
     }
 }
 
-// Perfect login system - works reliably
+// Fixed login system - consistent behavior
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -165,64 +165,56 @@ app.post('/api/login', async (req, res) => {
     
     // Input validation
     if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password required' });
+        return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     const cleanUsername = String(username).trim().toLowerCase();
     const cleanPassword = String(password).trim();
 
     if (!cleanUsername || !cleanPassword) {
-        return res.status(400).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     try {
-        let user = null;
-        
-        // Demo accounts that always work
-        const demoAccounts = {
-            'demo': 'demo',
-            'test': 'test', 
-            'user1': 'pass1',
-            'admin': 'admin'
-        };
-        
-        // Check demo accounts first
-        if (demoAccounts[cleanUsername] === cleanPassword) {
-            user = {
-                _id: `demo-${cleanUsername}`,
-                username: cleanUsername,
-                coins: 1000,
-                serverCount: 0,
-                pterodactylUserId: null
-            };
-            console.log('✅ Demo account login:', cleanUsername);
-        } else {
-            // Try database lookup
-            try {
-                user = await User.findOne({ 
-                    username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
-                    password: cleanPassword
-                });
-                
-                if (user) {
-                    console.log('✅ Database user found:', user.username);
-                }
-            } catch (dbError) {
-                console.log('⚠️ Database error:', dbError.message);
-                // Database error - still allow demo accounts
-            }
+        // Check database connection
+        if (mongoose.connection.readyState !== 1) {
+            console.log('❌ Database not connected');
+            return res.status(401).json({ error: 'Invalid username or password' });
         }
+
+        // Find user in database
+        const user = await User.findOne({ 
+            username: { $regex: new RegExp(`^${cleanUsername}$`, 'i') },
+            password: cleanPassword
+        });
         
         if (!user) {
             console.log('❌ Invalid credentials for:', cleanUsername);
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
+        console.log('✅ Database user found:', user.username);
+
+        // Create or update Pterodactyl user if needed
+        if (!user.pterodactylUserId) {
+            console.log('Creating Pterodactyl account for:', user.username);
+            const pterodactylUserId = await createPterodactylUser(user.username);
+            if (pterodactylUserId) {
+                user.pterodactylUserId = pterodactylUserId;
+                await user.save();
+                console.log('✅ Pterodactyl account created:', pterodactylUserId);
+            }
+        }
+
+        // Update last login
+        user.lastLogin = new Date();
+        await user.save();
+
         // Create session
         const sessionData = {
             id: user._id,
             username: user.username,
-            coins: user.coins || 1000,
+            coins: user.coins || 100,
             pterodactylUserId: user.pterodactylUserId,
             serverCount: user.serverCount || 0
         };
@@ -238,29 +230,20 @@ app.post('/api/login', async (req, res) => {
         
     } catch (error) {
         console.error('❌ LOGIN ERROR:', error.message);
-        res.status(500).json({ error: 'Login failed. Please try again.' });
+        return res.status(401).json({ error: 'Invalid username or password' });
     }
 });
 
-// User API with database error handling
+// User API - consistent data retrieval
 app.get('/api/user', async (req, res) => {
     if (!req.session || !req.session.user) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
     
     try {
-        // Get fresh user data with error handling
-        let user;
-        try {
-            user = await User.findById(req.session.user.id);
-        } catch (dbError) {
-            console.log('⚠️ Database error in user API:', dbError.message);
-            // Return session data if DB fails
-            return res.json(req.session.user);
-        }
+        const user = await User.findById(req.session.user.id);
         
         if (!user) {
-            // User not found, destroy session
             req.session.destroy(() => {});
             return res.status(401).json({ error: 'User not found' });
         }
@@ -273,15 +256,14 @@ app.get('/api/user', async (req, res) => {
             serverCount: user.serverCount || 0
         };
         
-        // Update session
+        // Update session with fresh data
         req.session.user = userData;
         
         res.json(userData);
         
     } catch (error) {
         console.error('User API error:', error.message);
-        // Return session data as fallback
-        res.json(req.session.user);
+        res.status(500).json({ error: 'Failed to get user data' });
     }
 });
 
@@ -394,9 +376,8 @@ app.post('/api/admin/create-user', async (req, res) => {
         });
         
         if (existingUser) {
-            return res.json({ 
-                success: true, 
-                message: 'User already exists',
+            return res.status(400).json({ 
+                error: 'User already exists',
                 username: cleanUsername
             });
         }

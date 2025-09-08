@@ -330,6 +330,96 @@ class Premium(commands.Cog):
         
         mode = await self.bot.db.get_premium_music_mode(user_id)
         return mode or "lavalink"
+    
+    @commands.hybrid_command(name="vip")
+    async def vip_command(self, ctx, action: str = None):
+        """VIP features for premium users"""
+        if not await self.is_premium(ctx.author.id):
+            embed = discord.Embed(
+                title="❌ Premium Required",
+                description="VIP features are only available for premium users!",
+                color=0xff0000
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+            return
+        
+        if action is None or action.lower() == "status":
+            embed = discord.Embed(
+                title="🌟 VIP Status",
+                description=f"**{ctx.author.display_name}** - You are a VIP Premium User!\n\n🏆 **VIP Benefits Active:**\n⚡ No command cooldowns\n🎵 Premium music access\n📩 Direct owner support\n🛠️ Early feature access\n🎟️ Priority support queue",
+                color=0xffd700
+            )
+            embed.set_thumbnail(url=ctx.author.display_avatar.url)
+        elif action.lower() == "perks":
+            embed = discord.Embed(
+                title="🏆 VIP Perks",
+                description="**Exclusive VIP Benefits:**\n\n🌟 **VIP Badge** - Special recognition\n⚡ **Instant Commands** - Zero cooldowns\n🎶 **Premium Music** - Spotify streaming\n📞 **Priority Support** - Skip the queue\n🔧 **Beta Access** - Try features first\n💎 **Exclusive Commands** - VIP-only features",
+                color=0xffd700
+            )
+        elif action.lower() == "support":
+            embed = discord.Embed(
+                title="📞 VIP Support",
+                description="**Priority Support Access**\n\nAs a VIP member, you get:\n🎟️ **Priority Queue** - Skip regular support\n📩 **Direct Access** - Contact owners directly\n⚡ **Faster Response** - 24/7 priority support\n\n[Join Support Server](https://discord.gg/UKR78VcEtg)",
+                color=0xffd700
+            )
+        else:
+            embed = discord.Embed(
+                title="🌟 VIP Commands",
+                description="**Available VIP Actions:**\n\n`vip status` - Check your VIP status\n`vip perks` - View all VIP benefits\n`vip support` - Get priority support access",
+                color=0xffd700
+            )
+        
+        embed = add_dravon_footer(embed)
+        await ctx.send(embed=embed)
+    
+    @commands.hybrid_command(name="exclusive")
+    async def exclusive_command(self, ctx, feature: str = None):
+        """Exclusive premium features"""
+        if not await self.is_premium(ctx.author.id):
+            embed = discord.Embed(
+                title="❌ Premium Required",
+                description="Exclusive features are only available for premium users!",
+                color=0xff0000
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+            return
+        
+        if feature is None or feature.lower() == "features":
+            embed = discord.Embed(
+                title="🔐 Exclusive Features",
+                description="**Premium Exclusive Access:**\n\n🎵 **Spotify Integration** - Direct Spotify streaming\n⚡ **No-Prefix Commands** - Natural command usage\n🏆 **Premium Badge** - Special recognition\n📊 **Advanced Analytics** - Detailed server stats\n🎮 **Beta Features** - Early access to new tools",
+                color=0x9932cc
+            )
+        elif feature.lower() == "music":
+            current_mode = await self.bot.db.get_premium_music_mode(ctx.author.id)
+            embed = discord.Embed(
+                title="🎵 Exclusive Music",
+                description=f"**Premium Music Access**\n\n**Current Mode:** {current_mode or 'lavalink'}\n\n🎶 **Spotify Mode** - High-quality streaming\n🎵 **Lavalink Mode** - Standard streaming\n🎧 **24/7 Support** - Continuous playback\n⚡ **No Cooldowns** - Instant responses\n\nUse `premium mode <spotify/lavalink>` to switch!",
+                color=0x9932cc
+            )
+        elif feature.lower() == "support":
+            embed = discord.Embed(
+                title="📞 Exclusive Support",
+                description="**Premium Support Benefits:**\n\n🎟️ **Priority Queue** - Skip regular support\n📩 **Direct Owner Access** - Contact owners\n⚡ **24/7 Availability** - Round-the-clock support\n🛠️ **Technical Support** - Advanced troubleshooting\n\n[Premium Support Server](https://discord.gg/UKR78VcEtg)",
+                color=0x9932cc
+            )
+        elif feature.lower() == "beta":
+            embed = discord.Embed(
+                title="🧪 Exclusive Beta",
+                description="**Beta Feature Access:**\n\n🚀 **Early Access** - Try features before release\n🔧 **Beta Commands** - Experimental tools\n📊 **Advanced Features** - Cutting-edge functionality\n🎮 **Preview Mode** - See upcoming updates\n\n*Beta features may be unstable*",
+                color=0x9932cc
+            )
+        else:
+            embed = discord.Embed(
+                title="🔐 Exclusive Commands",
+                description="**Available Exclusive Features:**\n\n`exclusive features` - View all exclusive features\n`exclusive music` - Access premium music modes\n`exclusive support` - Get exclusive support\n`exclusive beta` - Access beta features",
+                color=0x9932cc
+            )
+        
+        embed = add_dravon_footer(embed)
+        await ctx.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Premium(bot))

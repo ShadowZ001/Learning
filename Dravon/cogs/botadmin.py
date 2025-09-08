@@ -34,8 +34,7 @@ class BotAdmin(commands.Cog):
     def is_bot_admin(self, user_id):
         return user_id in self.bot_admins
     
-    async def cog_check(self, ctx):
-        return self.is_bot_admin(ctx.author.id)
+    # Remove cog_check to allow commands to be visible
     
     @commands.command(name='global', hidden=True)
     async def global_announce(self, ctx, *, message=None):

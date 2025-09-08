@@ -347,8 +347,19 @@ class AntiNuke(commands.Cog):
         embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413146132405817487/f41e57df-936d-428a-8aa8-a0b4ca2a1e64.jpg?ex=68bade64&is=68b98ce4&hm=b47dca3ee7abd906adf59b9a6974c047a2ee5079928e6b3ba37255ea7b9945f7&")
         embed.set_footer(text="AntiNuke v6.0 • Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
         
+        # Add loading animation
+        loading_embed = discord.Embed(
+            title="🔄 Loading AntiNuke Setup...",
+            description="⏳ Initializing security configuration wizard...",
+            color=0xffd700
+        )
+        loading_embed.set_footer(text="Please wait...", icon_url=self.bot.user.display_avatar.url)
+        
+        message = await ctx.send(embed=loading_embed)
+        await asyncio.sleep(2)
+        
         view = AntiNukeSetupView(self.bot, ctx.guild)
-        await ctx.send(embed=embed, view=view)
+        await message.edit(embed=embed, view=view)
     
     @antinuke_group.command(name="logs")
     @commands.has_permissions(manage_guild=True)

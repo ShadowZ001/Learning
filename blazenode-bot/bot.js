@@ -147,37 +147,72 @@ bot.once('ready', async () => {
 
 bot.on('messageCreate', async (message) => {
     try {
-        // Skip bots and non-commands
+        // Skip bots
         if (message.author.bot) return;
-        if (!message.content.startsWith(PREFIX)) return;
-
-        // Parse command and arguments
-        const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-        const commandName = args.shift().toLowerCase();
+        
         const isAdmin = message.author.id === ADMIN_ID || botAdmins.includes(message.author.id);
+        
+        // Check if user is premium
+        let isPremium = false;
+        try {
+            const User = require('./models/User');
+            const user = await User.findOne({ 
+                $or: [
+                    { username: message.author.username },
+                    { discordId: message.author.id }
+                ]
+            });
+            isPremium = user?.isPremium && (!user.premiumExpiry || user.premiumExpiry > new Date());
+        } catch (error) {
+            console.log('⚠️ Premium check failed:', error.message);
+        }
+        
+        let commandName, args, hasPrefix = false;
+        
+        // Check for prefix command
+        if (message.content.startsWith(PREFIX)) {
+            hasPrefix = true;
+            args = message.content.slice(PREFIX.length).trim().split(/ +/);
+            commandName = args.shift().toLowerCase();
+        }
+        // Check for premium no-prefix command (single letter A-Z, a-z)
+        else if (isPremium && /^[A-Za-z]( |$)/.test(message.content)) {
+            args = message.content.trim().split(/ +/);
+            commandName = args.shift().toLowerCase();
+        }
+        // Not a command
+        else {
+            return;
+        }
 
-        console.log(`📨 Command: ${PREFIX}${commandName} | User: ${message.author.username} (${message.author.id}) | Admin: ${isAdmin}`);
+        console.log(`📨 Command: ${hasPrefix ? PREFIX : ''}${commandName} | User: ${message.author.username} (${message.author.id}) | Admin: ${isAdmin} | Premium: ${isPremium}`);
         console.log(`📋 Args: [${args.join(', ')}]`);
 
         // Get command
         const command = bot.commands.get(commandName);
         if (!command) {
             console.log(`❌ Command not found: ${commandName}`);
-            return message.reply(`❌ **Unknown command:** \`${PREFIX}${commandName}\`\\nUse \`${PREFIX}help\` to see all available commands.`);
+            return message.reply(`❌ **Unknown command:** \`${hasPrefix ? PREFIX : ''}${commandName}\`\\nUse \`${PREFIX}help\` to see all available commands.`);
         }
 
-        console.log(`✅ Command found: ${command.name}, Admin only: ${command.adminOnly}`);
+        console.log(`✅ Command found: ${command.name}, Admin only: ${command.adminOnly}, Premium only: ${command.premiumOnly}`);
 
         // Check admin permissions
         if (command.adminOnly && !isAdmin) {
             console.log(`❌ Access denied for user ${message.author.id}`);
             return message.reply(`❌ **Access Denied!**\\nOnly <@${ADMIN_ID}> and authorized admins can use this command.`);
         }
+        
+        // Check premium permissions
+        if (command.premiumOnly && !isPremium && !isAdmin) {
+            console.log(`❌ Premium access denied for user ${message.author.id}`);
+            return message.reply(`❌ **Premium Required!**\\nThis command is only available for premium users. Contact <@${ADMIN_ID}> for premium access.`);
+        }
 
         console.log(`🚀 Executing command: ${command.name}`);
 
         // Execute command with proper parameters
-        await command.execute(message, args, isAdmin, bot, botAdmins);
+        await command.execute(message, args, isAdmin, bot, botAdmins, isPremium);
         
         console.log(`✅ Command executed successfully: ${command.name}`);
         

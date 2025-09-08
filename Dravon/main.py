@@ -61,6 +61,7 @@ class DravonBot(commands.Bot):
         await self.load_extension('cogs.mention')
         await self.load_extension('cogs.emoji')
         await self.load_extension('cogs.fun')
+        # await self.load_extension('cogs.premiumhelp')  # Comment out if doesn't exist
 
         await self.tree.sync()
         print(f"Synced slash commands")
@@ -112,67 +113,53 @@ class DravonBot(commands.Bot):
                 guild_premium = await premium_cog.is_premium_guild(message.guild.id)
                 
                 if user_premium or guild_premium:
-                    # Only premium users can use commands without prefix
-                    content_lower = message.content.lower().strip()
-                    first_word = content_lower.split()[0] if content_lower.split() else ''
+                    content_stripped = message.content.strip()
+                    words = content_stripped.split()
                     
-                    # Comprehensive command list including all cog commands
-                    all_command_names = set()
-                    
-                    # Get all commands from bot
-                    def add_commands_recursive(commands):
-                        for command in commands:
-                            all_command_names.add(command.name.lower())
-                            if hasattr(command, 'aliases') and command.aliases:
-                                all_command_names.update([alias.lower() for alias in command.aliases])
-                            # Handle group commands
-                            if hasattr(command, 'commands'):
-                                add_commands_recursive(command.commands)
-                    
-                    # Add all bot commands
-                    add_commands_recursive(self.commands)
-                    
-                    # Add hybrid commands and app commands
-                    for cog in self.cogs.values():
-                        add_commands_recursive(cog.get_commands())
-                    
-                    # Extended static command list for all features
-                    static_commands = {
-                        # Basic commands
-                        'help', 'mhelp', 'h', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
-                        'ping', 'support', 'partnership', 'docs', 'invite',
+                    if words:
+                        first_word = words[0]
                         
-                        # Music commands
-                        'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue', 'q', 'volume',
-                        'shuffle', 'clear', 'nowplaying', 'np', 'loop', 'autoplay',
-                        
-                        # Moderation commands
-                        'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge',
-                        'timeout', 'untimeout', 'slowmode', 'lock', 'unlock',
-                        
-                        # Setup commands
-                        'welcome', 'leave', 'boost', 'autorole', 'automod', 'antinuke',
-                        'ticket', 'embed', 'logs', 'prefix',
-                        
-                        # Premium commands
-                        'premium', 'mode', 'activate',
-                        
-                        # Fun commands
-                        'kiss', 'slap', 'kill', 'hug', 'pat', 'poke',
-                        
-                        # Utility commands
-                        'afk', 'level', 'rank', 'leaderboard', 'avatar', 'banner',
-                        'giveaway', 'poll', 'remind', 'weather', 'translate',
-                        
-                        # Admin commands
-                        'whitelist', 'blacklist', 'reload', 'sync', 'eval', 'exec'
-                    }
-                    all_command_names.update(static_commands)
-                    
-                    # Check if first word is a command (case-insensitive)
-                    if first_word in all_command_names:
-                        prefix = await self.get_prefix(message)
-                        message.content = f"{prefix}{message.content}"
+                        # Check if starts with letter (A-Z or a-z)
+                        if first_word and first_word[0].isalpha():
+                            # Get all commands
+                            all_commands = set()
+                            
+                            # Add all bot commands
+                            for command in self.commands:
+                                all_commands.add(command.name.lower())
+                                if hasattr(command, 'aliases') and command.aliases:
+                                    for alias in command.aliases:
+                                        all_commands.add(alias.lower())
+                            
+                            # Add commands from all cogs
+                            for cog in self.cogs.values():
+                                for command in cog.get_commands():
+                                    all_commands.add(command.name.lower())
+                                    if hasattr(command, 'aliases') and command.aliases:
+                                        for alias in command.aliases:
+                                            all_commands.add(alias.lower())
+                            
+                            # All available commands
+                            all_commands.update({
+                                'help', 'mhelp', 'h', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
+                                'ping', 'support', 'partnership', 'docs', 'invite', 'premiumhelp',
+                                'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue', 'q', 'volume',
+                                'shuffle', 'clear', 'nowplaying', 'np', 'loop', 'autoplay',
+                                'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge',
+                                'timeout', 'untimeout', 'slowmode', 'lock', 'unlock', 'delrole', 'nick',
+                                'clearwarn', 'role', 'addemote', 'avatar', 'banner', 'mc', 'color',
+                                'emotes', 'members', 'welcome', 'leave', 'boost', 'autorole', 'automod',
+                                'antinuke', 'ticket', 'embed', 'logs', 'prefix', 'premium', 'mode',
+                                'activate', 'vip', 'exclusive', 'kiss', 'slap', 'kill', 'hug', 'pat',
+                                'poke', 'afk', 'level', 'rank', 'leaderboard', 'giveaway', 'poll',
+                                'remind', 'weather', 'translate', 'whitelist', 'blacklist', 'reload',
+                                'sync', 'eval', 'exec', 'add', 'remove', 'setup', 'config', 'reset'
+                            })
+                            
+                            # Check if command exists (case insensitive)
+                            if first_word.lower() in all_commands:
+                                prefix = await self.get_prefix(message)
+                                message.content = f"{prefix}{message.content}"
         
         # Process emoji placeholders in message content
         if message.content:

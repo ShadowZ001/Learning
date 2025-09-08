@@ -35,6 +35,13 @@ const userSchema = new mongoose.Schema({
     createdBy: {
         type: String,
         required: true
+    },
+    isPremium: {
+        type: Boolean,
+        default: false
+    },
+    premiumExpiry: {
+        type: Date
     }
 }, {
     timestamps: true

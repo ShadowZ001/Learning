@@ -214,45 +214,20 @@ style.textContent = `
         box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
     }
     
-    .demo-accounts {
+    .login-help {
         text-align: center;
-        margin-bottom: 20px;
+        margin-top: 20px;
         padding: 15px;
         background: rgba(255, 255, 255, 0.03);
         border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    .demo-text {
+    .help-text {
         color: rgba(255, 255, 255, 0.7);
         font-size: 12px;
-        margin-bottom: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .demo-list {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-    
-    .demo-account {
-        background: rgba(255, 107, 53, 0.1);
-        color: #ff6b35;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-family: monospace;
-        border: 1px solid rgba(255, 107, 53, 0.2);
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .demo-account:hover {
-        background: rgba(255, 107, 53, 0.2);
-        transform: scale(1.05);
+        margin: 0;
+        line-height: 1.4;
     }
     
 
@@ -282,17 +257,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Demo account click to fill form
-document.addEventListener('click', function(e) {
-    if (e.target.matches('.demo-account')) {
-        const credentials = e.target.textContent.split('/');
-        if (credentials.length === 2) {
-            document.getElementById('username').value = credentials[0];
-            document.getElementById('password').value = credentials[1];
-            showNotification('Demo credentials filled! Click Sign In.', 'info');
-        }
-    }
-});
+
 
 // Add some interactive effects
 document.addEventListener('mousemove', function(e) {
