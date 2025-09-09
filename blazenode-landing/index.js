@@ -132,7 +132,7 @@ passport.use(new DiscordStrategy({
     clientID: config.DISCORD_CLIENT_ID,
     clientSecret: config.DISCORD_CLIENT_SECRET,
     callbackURL: config.DISCORD_REDIRECT_URI,
-    scope: ['identify', 'email']
+    scope: ['identify', 'guilds.join', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         console.log('🔐 Discord OAuth for:', profile.username);
@@ -268,7 +268,7 @@ app.get('/auth/discord', (req, res, next) => {
     
     passport.authenticate('discord', {
         state: state,
-        scope: ['identify', 'email', 'guilds.join', 'bot']
+        scope: ['identify', 'guilds.join', 'email']
     })(req, res, next);
 });
 
@@ -282,15 +282,21 @@ app.get('/auth/callback', passport.authenticate('discord', {
             return res.redirect('/?error=no_user');
         }
         
+        console.log('✅ User object:', {
+            id: user._id,
+            username: user.discordUsername,
+            email: user.email
+        });
+        
         console.log('✅ Discord callback success for:', user.discordUsername);
         
         // Create session
         req.session.user = {
             id: user._id.toString(),
-            username: user.discordUsername,
+            username: user.discordUsername || user.username,
             email: user.email,
             discordId: user.discordId,
-            coins: user.coins,
+            coins: user.coins || 1000,
             isAdmin: user.isAdmin || false,
             serverCount: user.serverCount || 0
         };
@@ -307,7 +313,8 @@ app.get('/auth/callback', passport.authenticate('discord', {
         });
         
     } catch (error) {
-        console.error('❌ Callback error:', error);
+        console.error('❌ Callback error:', error.message);
+        console.error('❌ Stack:', error.stack);
         res.redirect('/?error=callback_failed');
     }
 });
