@@ -103,14 +103,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('.'));
 app.use(session({
     secret: config.SESSION_SECRET,
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
-        httpOnly: false,
+        httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'none'
+        sameSite: 'lax'
     }
 }));
 
@@ -150,8 +150,13 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('🔐 Discord OAuth for:', profile.username);
-        console.log('Profile data:', profile);
+        console.log('🔐 Discord OAuth for:', profile.username, profile.id);
+        
+        // Ensure MongoDB is connected
+        if (mongoose.connection.readyState !== 1) {
+            console.error('❌ MongoDB not connected during OAuth');
+            return done(new Error('Database not available'), null);
+        }
         
         // Find or create user
         let user = await User.findOne({ discordId: profile.id });
@@ -160,11 +165,12 @@ passport.use(new DiscordStrategy({
             // Update existing user
             user.discordUsername = profile.username;
             user.discordAvatar = profile.avatar;
-            user.email = profile.email;
+            user.email = profile.email || user.email;
             user.lastLogin = new Date();
-            console.log('✅ Updated existing user');
+            console.log('✅ Updated existing user:', user.discordUsername);
         } else {
             // Create new user
+            console.log('✅ Creating new user for:', profile.username);
             user = new User({
                 discordId: profile.id,
                 discordUsername: profile.username,
@@ -177,17 +183,16 @@ passport.use(new DiscordStrategy({
                 serverCount: 0,
                 lastLogin: new Date()
             });
-            console.log('✅ Created new user');
         }
         
         await user.save();
-        console.log('✅ User saved to database');
+        console.log('✅ User saved successfully:', user.discordUsername);
         
         return done(null, user);
     } catch (error) {
         console.error('❌ Discord OAuth error:', error.message);
         console.error('❌ Stack:', error.stack);
-        return done(null, false, { message: error.message });
+        return done(error, null);
     }
 }));
 
@@ -283,49 +288,45 @@ app.get('/auth/discord', (req, res, next) => {
     passport.authenticate('discord')(req, res, next);
 });
 
-app.get('/auth/callback', (req, res, next) => {
-    passport.authenticate('discord', (err, user, info) => {
-        if (err || !user) {
-            console.error('❌ Auth failed:', err || 'No user');
-            return res.redirect('/?error=auth_failed');
+app.get('/auth/callback', passport.authenticate('discord', {
+    failureRedirect: '/?error=auth_failed'
+}), async (req, res) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            console.error('❌ No user in callback');
+            return res.redirect('/?error=no_user');
         }
         
-        console.log('✅ Discord login success:', user.discordUsername);
+        console.log('✅ Discord callback success for:', user.discordUsername);
         
-        // Login user with passport
-        req.logIn(user, (loginErr) => {
-            if (loginErr) {
-                console.error('❌ Login error:', loginErr);
-                return res.redirect('/?error=login_failed');
+        // Create session
+        req.session.authenticated = true;
+        req.session.user = {
+            id: user._id.toString(),
+            username: user.discordUsername,
+            email: user.email,
+            discordId: user.discordId,
+            coins: user.coins || 1000,
+            isAdmin: user.isAdmin || false,
+            serverCount: user.serverCount || 0
+        };
+        
+        // Save session explicitly
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+                return res.redirect('/?error=session_failed');
             }
             
-            // Create session data
-            req.session.authenticated = true;
-            req.session.user = {
-                id: user._id.toString(),
-                username: user.discordUsername,
-                email: user.email,
-                discordId: user.discordId,
-                coins: user.coins || 1000,
-                isAdmin: user.isAdmin || false,
-                serverCount: user.serverCount || 0
-            };
-            
-            console.log('✅ Session created, redirecting to dashboard');
-            
-            // Force session save and redirect
-            req.session.save((saveErr) => {
-                if (saveErr) {
-                    console.error('❌ Session save error:', saveErr);
-                    return res.redirect('/?error=session_failed');
-                }
-                
-                console.log('✅ Session saved successfully');
-                res.redirect('/dashboard.html');
-            });
+            console.log('✅ Session created and saved, redirecting to dashboard');
+            res.redirect('/dashboard.html');
         });
         
-    })(req, res, next);
+    } catch (error) {
+        console.error('❌ Callback error:', error);
+        res.redirect('/?error=callback_failed');
+    }
 });
 
 // Discord-only authentication - username/password login removed
