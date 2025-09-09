@@ -269,42 +269,33 @@ app.get('/auth/discord', (req, res, next) => {
 
 app.get('/auth/callback', (req, res, next) => {
     passport.authenticate('discord', (err, user, info) => {
-        if (err) {
-            console.error('❌ Auth error:', err);
-            return res.redirect('/?error=auth_error');
+        if (err || !user) {
+            console.error('❌ Auth failed:', err || 'No user');
+            return res.redirect('/');
         }
         
-        if (!user) {
-            console.error('❌ No user returned');
-            return res.redirect('/?error=no_user');
-        }
+        console.log('✅ Discord login success:', user.discordUsername);
         
-        console.log('✅ Login success for:', user.discordUsername);
+        // Create session immediately
+        req.session.authenticated = true;
+        req.session.user = {
+            id: user._id.toString(),
+            username: user.discordUsername,
+            email: user.email,
+            discordId: user.discordId,
+            coins: user.coins || 1000,
+            isAdmin: user.isAdmin || false,
+            serverCount: user.serverCount || 0
+        };
         
-        // Manual login
-        req.logIn(user, (loginErr) => {
-            if (loginErr) {
-                console.error('❌ Login error:', loginErr);
-                return res.redirect('/?error=login_failed');
-            }
-            
-            // Create session
-            req.session.user = {
-                id: user._id.toString(),
-                username: user.discordUsername,
-                email: user.email,
-                discordId: user.discordId,
-                coins: user.coins,
-                isAdmin: user.isAdmin || false,
-                serverCount: user.serverCount || 0
-            };
-            
-            console.log('✅ Session created:', req.session.user);
-            console.log('✅ Redirecting to dashboard');
-            
-            // Direct redirect without waiting for save
-            return res.redirect('/dashboard.html');
+        console.log('✅ Session set, redirecting to dashboard');
+        
+        // Force session save and redirect
+        req.session.save(() => {
+            res.writeHead(302, { 'Location': '/dashboard.html' });
+            res.end();
         });
+        
     })(req, res, next);
 });
 
@@ -597,29 +588,29 @@ app.get('/debug-session', (req, res) => {
 // Serve static files
 app.get('/', (req, res) => {
     console.log('🏠 Home page access');
-    console.log('Session exists:', !!req.session);
-    console.log('User in session:', req.session?.user?.username);
+    console.log('Authenticated:', req.session?.authenticated);
     
-    if (req.session && req.session.user && req.session.user.id) {
-        console.log('✅ User already logged in, redirecting to dashboard');
+    if (req.session?.authenticated && req.session?.user) {
+        console.log('✅ Already logged in, redirecting to dashboard');
         return res.redirect('/dashboard.html');
     }
     
-    console.log('🔐 No valid session, serving login page');
+    console.log('🔐 Not logged in, serving login page');
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/dashboard.html', (req, res) => {
     console.log('📋 Dashboard access');
-    console.log('Session user:', req.session?.user?.username);
+    console.log('Authenticated:', req.session?.authenticated);
+    console.log('User:', req.session?.user?.username);
     
-    // Simple check - if no user in session, redirect
-    if (!req.session?.user?.id) {
-        console.log('❌ No session, redirect to login');
+    // Check if authenticated
+    if (!req.session?.authenticated || !req.session?.user) {
+        console.log('❌ Not authenticated, redirecting');
         return res.redirect('/');
     }
     
-    console.log('✅ Serving dashboard');
+    console.log('✅ Authenticated, serving dashboard');
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
