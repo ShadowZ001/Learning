@@ -114,11 +114,27 @@ app.use(session({
     }
 }));
 
-// Session middleware with enhanced authentication check
+// Enhanced session middleware with authentication check
 app.use((req, res, next) => {
     req.isAuthenticated = () => {
-        return (req.session && req.session.user && req.session.user.id) || (req.user && req.user._id);
+        return (req.session?.authenticated && req.session?.user?.id) || (req.user && req.user._id);
     };
+    
+    // Sync passport user to session if session is missing but passport user exists
+    if (req.user && (!req.session?.user || !req.session?.authenticated)) {
+        req.session.authenticated = true;
+        req.session.user = {
+            id: req.user._id.toString(),
+            username: req.user.discordUsername,
+            email: req.user.email,
+            discordId: req.user.discordId,
+            coins: req.user.coins || 1000,
+            isAdmin: req.user.isAdmin || false,
+            serverCount: req.user.serverCount || 0
+        };
+        console.log('✅ Synced passport user to session:', req.user.discordUsername);
+    }
+    
     next();
 });
 
@@ -271,29 +287,42 @@ app.get('/auth/callback', (req, res, next) => {
     passport.authenticate('discord', (err, user, info) => {
         if (err || !user) {
             console.error('❌ Auth failed:', err || 'No user');
-            return res.redirect('/');
+            return res.redirect('/?error=auth_failed');
         }
         
         console.log('✅ Discord login success:', user.discordUsername);
         
-        // Create session immediately
-        req.session.authenticated = true;
-        req.session.user = {
-            id: user._id.toString(),
-            username: user.discordUsername,
-            email: user.email,
-            discordId: user.discordId,
-            coins: user.coins || 1000,
-            isAdmin: user.isAdmin || false,
-            serverCount: user.serverCount || 0
-        };
-        
-        console.log('✅ Session set, redirecting to dashboard');
-        
-        // Force session save and redirect
-        req.session.save(() => {
-            res.writeHead(302, { 'Location': '/dashboard.html' });
-            res.end();
+        // Login user with passport
+        req.logIn(user, (loginErr) => {
+            if (loginErr) {
+                console.error('❌ Login error:', loginErr);
+                return res.redirect('/?error=login_failed');
+            }
+            
+            // Create session data
+            req.session.authenticated = true;
+            req.session.user = {
+                id: user._id.toString(),
+                username: user.discordUsername,
+                email: user.email,
+                discordId: user.discordId,
+                coins: user.coins || 1000,
+                isAdmin: user.isAdmin || false,
+                serverCount: user.serverCount || 0
+            };
+            
+            console.log('✅ Session created, redirecting to dashboard');
+            
+            // Force session save and redirect
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('❌ Session save error:', saveErr);
+                    return res.redirect('/?error=session_failed');
+                }
+                
+                console.log('✅ Session saved successfully');
+                res.redirect('/dashboard.html');
+            });
         });
         
     })(req, res, next);
@@ -304,14 +333,19 @@ app.get('/auth/callback', (req, res, next) => {
 
 // User API - Get current user data
 app.get('/api/user', async (req, res) => {
-    if (!req.session?.user?.id) {
+    // Check both session and passport user
+    const userId = req.session?.user?.id || req.user?._id;
+    
+    if (!userId) {
+        console.log('❌ User API: No user ID found');
         return res.status(401).json({ error: 'Not authenticated' });
     }
     
     try {
-        const user = await User.findById(req.session.user.id);
+        const user = await User.findById(userId);
         
         if (!user) {
+            console.log('❌ User API: User not found in database');
             req.session.destroy(() => {});
             return res.status(401).json({ error: 'User not found' });
         }
@@ -327,11 +361,25 @@ app.get('/api/user', async (req, res) => {
             loginType: 'discord'
         };
         
+        // Update session if it exists but is incomplete
+        if (req.session && !req.session.user) {
+            req.session.authenticated = true;
+            req.session.user = {
+                id: user._id.toString(),
+                username: user.discordUsername,
+                email: user.email,
+                discordId: user.discordId,
+                coins: user.coins,
+                isAdmin: user.isAdmin || false,
+                serverCount: user.serverCount || 0
+            };
+        }
+        
         console.log('✅ User API response for:', userData.username);
         res.json(userData);
         
     } catch (error) {
-        console.error('User API error:', error);
+        console.error('❌ User API error:', error);
         res.status(500).json({ error: 'Failed to get user data' });
     }
 });
@@ -588,9 +636,13 @@ app.get('/debug-session', (req, res) => {
 // Serve static files
 app.get('/', (req, res) => {
     console.log('🏠 Home page access');
-    console.log('Authenticated:', req.session?.authenticated);
+    console.log('Session authenticated:', req.session?.authenticated);
+    console.log('Passport user:', req.user?.discordUsername);
     
-    if (req.session?.authenticated && req.session?.user) {
+    // Check if already authenticated
+    const isAuthenticated = (req.session?.authenticated && req.session?.user) || req.user;
+    
+    if (isAuthenticated) {
         console.log('✅ Already logged in, redirecting to dashboard');
         return res.redirect('/dashboard.html');
     }
@@ -600,17 +652,21 @@ app.get('/', (req, res) => {
 });
 
 app.get('/dashboard.html', (req, res) => {
-    console.log('📋 Dashboard access');
-    console.log('Authenticated:', req.session?.authenticated);
-    console.log('User:', req.session?.user?.username);
+    console.log('📋 Dashboard access attempt');
+    console.log('Session exists:', !!req.session);
+    console.log('Session authenticated:', req.session?.authenticated);
+    console.log('Session user:', req.session?.user?.username);
+    console.log('Passport user:', req.user?.discordUsername);
     
-    // Check if authenticated
-    if (!req.session?.authenticated || !req.session?.user) {
-        console.log('❌ Not authenticated, redirecting');
+    // Check authentication - either session or passport
+    const isAuthenticated = (req.session?.authenticated && req.session?.user) || req.user;
+    
+    if (!isAuthenticated) {
+        console.log('❌ Not authenticated, redirecting to login');
         return res.redirect('/');
     }
     
-    console.log('✅ Authenticated, serving dashboard');
+    console.log('✅ User authenticated, serving dashboard');
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 

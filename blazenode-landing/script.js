@@ -47,14 +47,33 @@ function initAnimations() {
     });
 }
 
-// Simplified login feedback - no URL parameters needed
+// Enhanced login feedback with error handling
 document.addEventListener('DOMContentLoaded', function() {
-    // Clean any URL parameters on load
-    if (window.location.search) {
+    // Check for error parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    
+    if (error) {
+        let errorMessage = 'Login failed. Please try again.';
+        
+        switch(error) {
+            case 'auth_failed':
+                errorMessage = 'Discord authentication failed. Please try again.';
+                break;
+            case 'login_failed':
+                errorMessage = 'Login process failed. Please try again.';
+                break;
+            case 'session_failed':
+                errorMessage = 'Session creation failed. Please try again.';
+                break;
+        }
+        
+        showNotification(errorMessage, 'error');
+        
+        // Clean URL after showing error
         window.history.replaceState({}, document.title, window.location.pathname);
     }
     
-    // Check if user just logged in (could add session storage check if needed)
     console.log('🔐 Login page loaded');
 });
 

@@ -89,15 +89,23 @@ class Dashboard {
                 return true;
             } else if (response.status === 401) {
                 console.log('❌ User not authenticated, redirecting to login');
-                window.location.href = '/';
+                // Add small delay to prevent redirect loops
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 100);
                 return false;
             } else {
                 console.log('❌ Server error:', response.status);
-                return false;
+                // Retry once after a short delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return this.loadUserData();
             }
         } catch (error) {
             console.error('❌ Error loading user data:', error);
-            window.location.href = '/';
+            // Add small delay to prevent redirect loops
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 100);
             return false;
         }
     }
