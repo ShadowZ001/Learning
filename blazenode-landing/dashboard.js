@@ -36,12 +36,12 @@ class Dashboard {
                 return;
             }
             
-            // Check URL hash and show appropriate page
-            const hash = window.location.hash.substring(1);
-            if (hash && hash !== 'home') {
-                this.showPage(hash);
-            } else {
-                this.showPage('home');
+            // Always show home page after login
+            this.showPage('home');
+            
+            // Update URL to show we're on home
+            if (window.location.hash !== '#home') {
+                window.history.replaceState(null, null, '/dashboard.html#home');
             }
             
             // Load dashboard data in parallel

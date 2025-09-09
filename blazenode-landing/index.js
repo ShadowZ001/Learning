@@ -389,8 +389,12 @@ app.get('/auth/callback', (req, res, next) => {
                 console.log('✅ Session saved successfully, redirecting to dashboard home');
                 console.log('✅ Session ID:', req.sessionID);
                 
-                // Redirect to dashboard home page
-                res.redirect('/dashboard.html#home');
+                // Force redirect to dashboard home page
+                res.writeHead(302, {
+                    'Location': '/dashboard.html',
+                    'Cache-Control': 'no-cache'
+                });
+                res.end();
             });
         });
     })(req, res, next);
@@ -660,7 +664,7 @@ app.get('/', (req, res) => {
     if (isAuthenticated) {
         const username = req.session?.user?.username || req.user?.discordUsername || req.user?.username;
         console.log('✅ User already logged in, redirecting to dashboard home:', username);
-        return res.redirect('/dashboard.html#home');
+        return res.redirect('/dashboard.html');
     }
     
     console.log('🔐 No valid session, serving login page');
@@ -998,6 +1002,9 @@ app.post('/api/delete-server', async (req, res) => {
     }
 });
 
+// Export app for cPanel first
+module.exports = app;
+
 // Start server (cPanel compatible)
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
@@ -1009,6 +1016,3 @@ if (require.main === module) {
         console.log(`⚡ Ready for login on port ${PORT}!`);
     });
 }
-
-// Export app for cPanel
-module.exports = app;

@@ -1,21 +1,2 @@
-# cPanel Node.js Configuration
-DirectoryIndex disabled
 RewriteEngine On
-RewriteRule ^$ app.js [QSA,L]
-RewriteRule ^(?!app\.js).*$ app.js [QSA,L]
-
-# Security Headers
-Header always set X-Content-Type-Options nosniff
-Header always set X-Frame-Options DENY
-Header always set X-XSS-Protection "1; mode=block"
-
-# CORS Headers for API
-Header always set Access-Control-Allow-Origin "*"
-Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-
-# Cache Control
-<FilesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg)$">
-    ExpiresActive On
-    ExpiresDefault "access plus 1 month"
-</FilesMatch>
+RewriteRule ^(.*)$ app.js [L]
