@@ -70,72 +70,51 @@ class Dashboard {
         try {
             console.log('👤 Fetching user data...');
             
-            // Add retry mechanism for user data loading
-            let attempts = 0;
-            const maxAttempts = 3;
-            
-            while (attempts < maxAttempts) {
-                attempts++;
-                
-                const response = await fetch('/api/user', {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                console.log(`User API response status (attempt ${attempts}):`, response.status);
-                
-                if (response.ok) {
-                    this.currentUser = await response.json();
-                    console.log('✅ User data loaded:', this.currentUser.username);
-                    console.log('✅ User details:', {
-                        id: this.currentUser.id,
-                        email: this.currentUser.email,
-                        coins: this.currentUser.coins,
-                        isAdmin: this.currentUser.isAdmin
-                    });
-                    
-                    // Update username immediately
-                    const usernameEl = document.getElementById('username');
-                    if (usernameEl) {
-                        usernameEl.textContent = this.currentUser.username;
-                    }
-                    
-                    // Show admin menu if user is admin
-                    if (this.currentUser.isAdmin) {
-                        const adminMenu = document.querySelector('.admin-only');
-                        if (adminMenu) {
-                            adminMenu.style.display = 'block';
-                            console.log('✅ Admin menu shown for:', this.currentUser.email);
-                        }
-                    }
-                    
-                    // Update coins display
-                    this.updateCoinsDisplay();
-                    
-                    return true;
-                } else if (response.status === 401) {
-                    console.log('❌ User not authenticated, status:', response.status);
-                    const errorData = await response.text();
-                    console.log('❌ Response:', errorData);
-                    return false;
-                } else {
-                    // Server error, retry
-                    console.log(`⚠️ Server error (${response.status}), retrying...`);
-                    if (attempts < maxAttempts) {
-                        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-                        continue;
-                    }
-                    return false;
+            const response = await fetch('/api/user', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
                 }
-            }
+            });
             
-            return false;
+            console.log('User API response status:', response.status);
+            
+            if (response.ok) {
+                this.currentUser = await response.json();
+                console.log('✅ User data loaded:', this.currentUser.username);
+                
+                // Update username immediately
+                const usernameEl = document.getElementById('username');
+                if (usernameEl) {
+                    usernameEl.textContent = this.currentUser.username;
+                }
+                
+                // Show admin menu if user is admin
+                if (this.currentUser.isAdmin) {
+                    const adminMenu = document.querySelector('.admin-only');
+                    if (adminMenu) {
+                        adminMenu.style.display = 'block';
+                        console.log('✅ Admin menu shown');
+                    }
+                }
+                
+                // Update coins display
+                this.updateCoinsDisplay();
+                
+                return true;
+            } else if (response.status === 401) {
+                console.log('❌ User not authenticated, redirecting to login');
+                window.location.href = '/';
+                return false;
+            } else {
+                console.log('❌ Server error:', response.status);
+                return false;
+            }
         } catch (error) {
             console.error('❌ Error loading user data:', error);
+            window.location.href = '/';
             return false;
         }
     }

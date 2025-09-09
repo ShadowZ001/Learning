@@ -9,7 +9,8 @@
     "dev": "nodemon app.js",
     "cpanel": "node app.js",
     "build": "echo 'Production ready - no build required'",
-    "test": "echo 'Discord OAuth2 ready for testing'"
+    "test": "node test-login-flow.js",
+    "test-login": "node test-login-flow.js"
   },
   "engines": {
     "node": ">=18.0.0",

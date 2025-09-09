@@ -98,41 +98,30 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
-// Session middleware with enhanced authentication check
-app.use((req, res, next) => {
-    req.isAuthenticated = () => {
-        return (req.session && req.session.user) || req.user;
-    };
-    
-    // Ensure session is properly initialized
-    if (req.session && !req.session.initialized) {
-        req.session.initialized = true;
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session initialization error:', err);
-            }
-        });
-    }
-    
-    next();
-});
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('.'));
 app.use(session({
     secret: config.SESSION_SECRET,
-    resave: true,
+    resave: false,
     saveUninitialized: false,
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
-        httpOnly: false,
+        httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         sameSite: 'lax'
     },
     rolling: true // Reset expiration on activity
 }));
+
+// Session middleware with enhanced authentication check
+app.use((req, res, next) => {
+    req.isAuthenticated = () => {
+        return (req.session && req.session.user && req.session.user.id) || (req.user && req.user._id);
+    };
+    next();
+});
 
 // Passport configuration
 app.use(passport.initialize());
@@ -206,11 +195,31 @@ passport.use(new DiscordStrategy({
                 createdBy: 'discord',
                 joinedDiscordServer: false,
                 serverCount: 0,
-                dailyRewardStreak: 0
+                dailyRewardStreak: 0,
+                lastLogin: new Date()
             });
             
             await user.save();
             console.log('✅ Created new Discord user:', user.discordUsername, 'Email:', user.email, 'Coins:', user.coins);
+            
+            // Create Pterodactyl user for new users
+            if (user.discordUsername) {
+                const pterodactylUserId = await createPterodactylUser(user.discordUsername);
+                if (pterodactylUserId) {
+                    user.pterodactylUserId = pterodactylUserId;
+                    await user.save();
+                    console.log('✅ Created Pterodactyl user:', pterodactylUserId);
+                }
+            }
+        }
+        
+        // Ensure Pterodactyl user exists for existing users
+        if (!user.pterodactylUserId && user.discordUsername) {
+            const pterodactylUserId = await createPterodactylUser(user.discordUsername);
+            if (pterodactylUserId) {
+                user.pterodactylUserId = pterodactylUserId;
+                console.log('✅ Created missing Pterodactyl user:', pterodactylUserId);
+            }
         }
         
         // Check if user is already in server
@@ -335,24 +344,18 @@ app.get('/auth/discord', (req, res, next) => {
 });
 
 app.get('/auth/callback', (req, res, next) => {
-    passport.authenticate('discord', (err, user, info) => {
+    passport.authenticate('discord', async (err, user, info) => {
         if (err) {
             console.error('❌ Discord auth error:', err.message);
-            return res.redirect('/?error=discord_auth_failed&reason=server_error');
+            return res.redirect('/?error=discord_auth_failed');
         }
         
         if (!user) {
             console.error('❌ Discord auth failed: No user returned');
-            return res.redirect('/?error=discord_auth_failed&reason=no_user');
+            return res.redirect('/?error=discord_auth_failed');
         }
         
-        // Log in the user using Passport
-        req.logIn(user, (loginErr) => {
-            if (loginErr) {
-                console.error('❌ Passport login error:', loginErr);
-                return res.redirect('/?error=login_failed');
-            }
-            
+        try {
             // Create complete session with all user data
             req.session.user = {
                 id: user._id.toString(),
@@ -377,26 +380,21 @@ app.get('/auth/callback', (req, res, next) => {
                 isAdmin: user.isAdmin
             });
             
-            console.log('✅ Session user data:', req.session.user);
-            
-            // Force session save and redirect
+            // Save session and redirect
             req.session.save((saveErr) => {
                 if (saveErr) {
                     console.error('❌ Session save error:', saveErr);
-                    return res.redirect('/?error=session_save_failed');
+                    return res.redirect('/?error=session_failed');
                 }
                 
-                console.log('✅ Session saved successfully, redirecting to dashboard home');
-                console.log('✅ Session ID:', req.sessionID);
-                
-                // Force redirect to dashboard home page
-                res.writeHead(302, {
-                    'Location': '/dashboard.html',
-                    'Cache-Control': 'no-cache'
-                });
-                res.end();
+                console.log('✅ Session saved, redirecting to dashboard');
+                return res.redirect('/dashboard.html');
             });
-        });
+            
+        } catch (error) {
+            console.error('❌ Callback error:', error);
+            return res.redirect('/?error=callback_failed');
+        }
     })(req, res, next);
 });
 
@@ -636,6 +634,54 @@ app.post('/api/admin/create-user', async (req, res) => {
     }
 });
 
+// Daily reward claim
+app.post('/api/claim-reward', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+        const user = await User.findById(req.session.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const now = new Date();
+        const lastReward = user.lastDailyReward;
+        
+        // Check if user can claim (24 hours since last claim)
+        if (lastReward && (now - lastReward) < 24 * 60 * 60 * 1000) {
+            return res.status(400).json({ error: 'Daily reward already claimed today' });
+        }
+
+        // Award coins and update streak
+        user.coins = (user.coins || 0) + 25;
+        user.lastDailyReward = now;
+        
+        if (lastReward && (now - lastReward) < 48 * 60 * 60 * 1000) {
+            user.dailyRewardStreak = (user.dailyRewardStreak || 0) + 1;
+        } else {
+            user.dailyRewardStreak = 1;
+        }
+
+        await user.save();
+
+        // Update session
+        req.session.user.coins = user.coins;
+        req.session.user.dailyRewardStreak = user.dailyRewardStreak;
+
+        res.json({
+            success: true,
+            coins: user.coins,
+            streak: user.dailyRewardStreak,
+            message: 'Daily reward claimed!'
+        });
+    } catch (error) {
+        console.error('Daily reward error:', error);
+        res.status(500).json({ error: 'Failed to claim reward' });
+    }
+});
+
 // Logout route
 app.post('/api/logout', (req, res) => {
     const username = req.session?.user?.username || 'unknown';
@@ -673,79 +719,24 @@ app.get('/', (req, res) => {
 
 app.get('/dashboard.html', async (req, res) => {
     console.log('📋 Dashboard access attempt');
-    console.log('Session exists:', !!req.session);
-    console.log('Session ID:', req.sessionID);
-    console.log('User in session:', req.session?.user?.username);
-    console.log('Passport user:', !!req.user);
-    console.log('Session user object:', req.session?.user);
+    console.log('Session user:', req.session?.user?.username);
     
-    // Check authentication using both session and passport
-    const isAuthenticated = (req.session && req.session.user) || req.user;
-    
-    if (!isAuthenticated) {
-        console.log('❌ No authentication found, redirecting to login');
+    // Check if user is authenticated
+    if (!req.session?.user?.id) {
+        console.log('❌ No valid session, redirecting to login');
         return res.redirect('/');
     }
     
     try {
-        // Get user from session or passport
-        const sessionUser = req.session?.user;
-        const passportUser = req.user;
-        
-        let userId;
-        if (sessionUser) {
-            userId = sessionUser.id;
-        } else if (passportUser) {
-            userId = passportUser._id || passportUser.id;
-        }
-        
-        if (!userId) {
-            console.log('❌ No user ID found, redirecting to login');
-            return res.redirect('/');
-        }
-        
         // Verify user exists in database
-        const user = await User.findById(userId);
+        const user = await User.findById(req.session.user.id);
         if (!user) {
             console.log('❌ User not found in database, destroying session');
             req.session.destroy(() => {});
             return res.redirect('/');
         }
         
-        // Ensure session has user data
-        if (!req.session.user) {
-            req.session.user = {
-                id: user._id.toString(),
-                username: user.discordUsername || user.username,
-                email: user.email,
-                discordId: user.discordId,
-                discordAvatar: user.discordAvatar,
-                coins: user.coins || 1000,
-                pterodactylUserId: user.pterodactylUserId,
-                serverCount: user.serverCount || 0,
-                isAdmin: user.isAdmin || false,
-                loginType: 'discord',
-                joinedDiscordServer: user.joinedDiscordServer || false,
-                dailyRewardStreak: user.dailyRewardStreak || 0
-            };
-            
-            // Save session with user data
-            req.session.save((err) => {
-                if (err) {
-                    console.error('❌ Error saving session:', err);
-                }
-            });
-        }
-        
-        console.log('✅ Valid session and user found, serving dashboard for:', user.discordUsername);
-        console.log('✅ User data:', {
-            id: user._id,
-            username: user.discordUsername,
-            email: user.email,
-            coins: user.coins,
-            isAdmin: user.isAdmin
-        });
-        
+        console.log('✅ Serving dashboard for:', user.discordUsername);
         res.sendFile(path.join(__dirname, 'dashboard.html'));
         
     } catch (error) {
