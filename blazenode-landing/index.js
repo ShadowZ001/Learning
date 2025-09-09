@@ -7,7 +7,7 @@ const path = require('path');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const config = require('./config');
-const { joinDiscordServerWithRetry, validateDiscordBot, checkUserInGuild, refreshDiscordToken } = require('./auth/discord');
+const { validateDiscordBot } = require('./auth/discord');
 
 const User = require('./models/User');
 const Coupon = require('./models/Coupon');
@@ -108,7 +108,7 @@ app.use(session({
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
-        httpOnly: true,
+        httpOnly: false,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         sameSite: 'lax'
     },
@@ -186,7 +186,9 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Validate Discord bot token on startup
-validateDiscordBot();
+validateDiscordBot().catch(err => {
+    console.log('⚠️ Discord bot validation failed, continuing without bot features');
+});
 
 // Create Pterodactyl user with proper format
 async function createPterodactylUser(username) {
@@ -271,10 +273,15 @@ app.get('/auth/discord', (req, res, next) => {
 });
 
 app.get('/auth/callback', passport.authenticate('discord', {
-    failureRedirect: '/'
+    failureRedirect: '/?error=auth_failed'
 }), async (req, res) => {
     try {
         const user = req.user;
+        if (!user) {
+            console.error('❌ No user in callback');
+            return res.redirect('/?error=no_user');
+        }
+        
         console.log('✅ Discord callback success for:', user.discordUsername);
         
         // Create session
@@ -288,12 +295,20 @@ app.get('/auth/callback', passport.authenticate('discord', {
             serverCount: user.serverCount || 0
         };
         
-        console.log('✅ Session created, redirecting to dashboard');
-        res.redirect('/dashboard.html');
+        // Save session and redirect
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+                return res.redirect('/?error=session_failed');
+            }
+            
+            console.log('✅ Session saved, redirecting to dashboard home');
+            res.redirect('/dashboard.html');
+        });
         
     } catch (error) {
         console.error('❌ Callback error:', error);
-        res.redirect('/');
+        res.redirect('/?error=callback_failed');
     }
 });
 
@@ -873,6 +888,88 @@ app.post('/api/delete-server', async (req, res) => {
     } catch (error) {
         console.error('Delete server error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Failed to delete server' });
+    }
+});
+
+// Missing API endpoints for dashboard functionality
+
+// AFK earning endpoint
+app.post('/api/afk-earn', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+        const user = await User.findById(req.session.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Award 1.2 coins for AFK earning
+        user.coins = (user.coins || 0) + 1.2;
+        await user.save();
+
+        // Update session
+        req.session.user.coins = user.coins;
+
+        res.json({
+            success: true,
+            coins: 1.2,
+            newBalance: user.coins
+        });
+    } catch (error) {
+        console.error('AFK earn error:', error);
+        res.status(500).json({ error: 'Failed to earn coins' });
+    }
+});
+
+// Linkvertise completion endpoint
+app.post('/api/linkvertise-complete', async (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+        const user = await User.findById(req.session.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Award 8 coins for Linkvertise completion
+        user.coins = (user.coins || 0) + 8;
+        await user.save();
+
+        // Update session
+        req.session.user.coins = user.coins;
+
+        res.json({
+            success: true,
+            coins: 8,
+            newBalance: user.coins
+        });
+    } catch (error) {
+        console.error('Linkvertise complete error:', error);
+        res.status(500).json({ error: 'Failed to process completion' });
+    }
+});
+
+// Leaderboard endpoint
+app.get('/api/leaderboard', async (req, res) => {
+    try {
+        const users = await User.find({})
+            .sort({ coins: -1 })
+            .limit(10)
+            .select('username discordUsername coins');
+        
+        const leaderboard = users.map(user => ({
+            username: user.discordUsername || user.username,
+            coins: user.coins || 0
+        }));
+        
+        res.json({ users: leaderboard });
+    } catch (error) {
+        console.error('Leaderboard error:', error);
+        res.status(500).json({ error: 'Failed to load leaderboard' });
     }
 });
 

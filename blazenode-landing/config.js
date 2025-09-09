@@ -12,13 +12,13 @@ module.exports = {
     PTERODACTYL_API_KEY: 'ptla_Q1aRhsnRiJ8PQEErS3IiknCuuAG1zdueM1OVck39LMN',
     PTERODACTYL_URL: 'https://panel.blazenode.site',
     
-    // Bot API Configuration  
-    BOT_API_KEY: process.env.BOT_TOKEN || 'MTQxNDYyMjE0MTcwNTYxNzU4Mw.GcKxYL.your_bot_token_here',
+    // Bot API Configuration
+    BOT_API_KEY: 'blazenode-bot-api-key-2025',
     
-    // Discord OAuth2 Configuration
+    // Discord OAuth2 Configuration - FIXED
     DISCORD_CLIENT_ID: '1414622141705617583',
     DISCORD_CLIENT_SECRET: 'lwXQLgJdLy844a1ejcTwjhzUwH4MqDh',
-    DISCORD_REDIRECT_URI: process.env.NODE_ENV === 'production' ? 'http://dash.blazenode.site/auth/callback' : 'http://localhost:3000/auth/callback',
+    DISCORD_REDIRECT_URI: 'https://dash.blazenode.site/auth/callback',
     DISCORD_GUILD_ID: '1413789539350118020',
     DISCORD_INVITE_LINK: 'https://discord.gg/PyfEzq5gQ',
     
