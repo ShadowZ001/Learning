@@ -1,168 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Test Login</title>
+    <title>Login Test</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #0a0a0a; color: white; }
-        .container { max-width: 500px; margin: 0 auto; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 10px; border: 1px solid #333; background: #1a1a1a; color: white; border-radius: 4px; }
-        button { background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #2563eb; }
-        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
-        .success { background: #10b981; }
-        .error { background: #ef4444; }
-        .info { background: #3b82f6; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #000; color: #fff; }
+        .btn { padding: 15px 30px; background: #5865f2; color: white; text-decoration: none; border-radius: 8px; display: inline-block; margin: 10px; }
+        .debug { background: #333; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        pre { background: #222; padding: 10px; border-radius: 4px; overflow-x: auto; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>BlazeNode Login Test</h1>
-        
-        <div class="form-group">
-            <label>Username:</label>
-            <input type="text" id="username" placeholder="Enter username">
-        </div>
-        
-        <div class="form-group">
-            <label>Password:</label>
-            <input type="password" id="password" placeholder="Enter password">
-        </div>
-        
-        <button onclick="testLogin()">Test Login</button>
-        <button onclick="checkUsers()">Check Users</button>
-        <button onclick="testConnection()">Test Connection</button>
-        
-        <div id="result"></div>
+    <h1>🔐 BlazeNode Login Test</h1>
+    
+    <div class="debug">
+        <h3>Test Links:</h3>
+        <a href="/auth/discord" class="btn">🔗 Login with Discord</a>
+        <a href="/dashboard.html" class="btn">📋 Go to Dashboard</a>
+        <a href="/debug-session" class="btn">🔍 Debug Session</a>
+        <a href="/api/user" class="btn">👤 User API</a>
+    </div>
+
+    <div class="debug">
+        <h3>Session Debug:</h3>
+        <button onclick="checkSession()" class="btn">Check Session</button>
+        <pre id="sessionData">Click "Check Session" to see current session data</pre>
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:5503';
-        
-        async function testConnection() {
-            const result = document.getElementById('result');
-            result.innerHTML = '<div class="info">Testing connection...</div>';
-            
+        async function checkSession() {
             try {
-                const response = await fetch(`${API_BASE}/api/debug/dbtest`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                
+                const response = await fetch('/debug-session');
                 const data = await response.json();
-                
-                if (response.ok) {
-                    result.innerHTML = `<div class="success">
-                        <h3>✅ Connection Test Passed</h3>
-                        <p><strong>Database:</strong> ${data.database.state}</p>
-                        <p><strong>Users:</strong> ${data.users.total}</p>
-                        <p><strong>Server:</strong> Running on port 5503</p>
-                    </div>`;
-                } else {
-                    result.innerHTML = `<div class="error">
-                        <h3>❌ Connection Test Failed</h3>
-                        <p>${data.error}</p>
-                    </div>`;
-                }
+                document.getElementById('sessionData').textContent = JSON.stringify(data, null, 2);
             } catch (error) {
-                result.innerHTML = `<div class="error">
-                    <h3>❌ Connection Error</h3>
-                    <p>Cannot connect to server: ${error.message}</p>
-                    <p>Make sure server is running on port 5503</p>
-                </div>`;
+                document.getElementById('sessionData').textContent = 'Error: ' + error.message;
             }
         }
-        
-        async function checkUsers() {
-            const result = document.getElementById('result');
-            result.innerHTML = '<div class="info">Checking users...</div>';
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/debug/users`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    let userList = '<h3>📋 Available Users:</h3>';
-                    data.users.forEach(user => {
-                        userList += `<p><strong>${user.username}</strong> : ${user.password} (${user.coins} coins)</p>`;
-                    });
-                    
-                    result.innerHTML = `<div class="success">
-                        ${userList}
-                        <p><strong>Total:</strong> ${data.count} users</p>
-                    </div>`;
-                } else {
-                    result.innerHTML = `<div class="error">
-                        <h3>❌ Failed to get users</h3>
-                        <p>${data.error}</p>
-                    </div>`;
-                }
-            } catch (error) {
-                result.innerHTML = `<div class="error">
-                    <h3>❌ Error</h3>
-                    <p>${error.message}</p>
-                </div>`;
-            }
-        }
-        
-        async function testLogin() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const result = document.getElementById('result');
-            
-            if (!username || !password) {
-                result.innerHTML = '<div class="error">Please enter username and password</div>';
-                return;
-            }
-            
-            result.innerHTML = '<div class="info">Testing login...</div>';
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    result.innerHTML = `<div class="success">
-                        <h3>✅ Login Successful!</h3>
-                        <p><strong>Username:</strong> ${data.user.username}</p>
-                        <p><strong>Coins:</strong> ${data.user.coins}</p>
-                        <p><strong>Servers:</strong> ${data.user.serverCount}</p>
-                        <p><strong>ID:</strong> ${data.user.id}</p>
-                        <button onclick="window.location.href='${API_BASE}/dashboard.html'">Go to Dashboard</button>
-                    </div>`;
-                } else {
-                    result.innerHTML = `<div class="error">
-                        <h3>❌ Login Failed</h3>
-                        <p><strong>Error:</strong> ${data.error}</p>
-                        <p><strong>Status:</strong> ${response.status}</p>
-                    </div>`;
-                }
-            } catch (error) {
-                result.innerHTML = `<div class="error">
-                    <h3>❌ Connection Error</h3>
-                    <p>${error.message}</p>
-                    <p>Check if server is running on port 5503</p>
-                </div>`;
-            }
-        }
-        
-        // Auto-test connection on load
-        window.onload = function() {
-            testConnection();
-        };
+
+        // Auto-check session on load
+        checkSession();
     </script>
 </body>
 </html>

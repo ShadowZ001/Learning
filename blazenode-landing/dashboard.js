@@ -25,43 +25,26 @@ class Dashboard {
             // Setup event listeners first
             this.setupEventListeners();
             
-            // Load user data with proper error handling
+            // Load user data
             const userLoaded = await this.loadUserData();
             
             if (!userLoaded) {
-                console.log('❌ User not authenticated, redirecting');
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 1000);
+                console.log('❌ User not authenticated, redirecting to login');
+                window.location.href = '/';
                 return;
             }
             
-            // Always show home page after login
+            // Show home page
             this.showPage('home');
             
-            // Update URL to show we're on home
-            if (window.location.hash !== '#home') {
-                window.history.replaceState(null, null, '/dashboard.html#home');
-            }
+            // Load dashboard data
+            await this.loadDashboardData();
             
-            // Load dashboard data in parallel
-            await Promise.all([
-                this.loadServers(),
-                this.loadResourceUsage(),
-                this.loadUserLimits()
-            ]);
-            
-            this.updateDashboardStats();
-            
-            console.log('✅ Dashboard ready!');
+            console.log('✅ Dashboard ready for:', this.currentUser.username);
             
         } catch (error) {
             console.error('❌ Dashboard init error:', error);
-            // Show error but don't redirect immediately
-            const usernameEl = document.getElementById('username');
-            if (usernameEl) {
-                usernameEl.textContent = 'Error loading';
-            }
+            window.location.href = '/';
         }
     }
 

@@ -127,120 +127,47 @@ app.use((req, res, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Discord OAuth2 Strategy with enhanced error handling
+// Discord OAuth2 Strategy - Simplified
 passport.use(new DiscordStrategy({
     clientID: config.DISCORD_CLIENT_ID,
     clientSecret: config.DISCORD_CLIENT_SECRET,
     callbackURL: config.DISCORD_REDIRECT_URI,
-    scope: ['identify', 'email', 'guilds.join', 'bot']
+    scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('🔐 Discord OAuth attempt for:', profile.username);
+        console.log('🔐 Discord OAuth for:', profile.username);
         
-        // Validate required profile data
-        if (!profile.id || !profile.username) {
-            console.error('❌ Invalid Discord profile data');
-            return done(new Error('Invalid Discord profile'), null);
-        }
-        
-        // Check for existing user by Discord ID or email (prevent duplicates)
-        let user = await User.findOne({
-            $or: [
-                { discordId: profile.id },
-                { email: profile.email }
-            ]
-        });
+        // Find or create user
+        let user = await User.findOne({ discordId: profile.id });
         
         if (user) {
-            // Update existing user with latest Discord data
-            user.discordId = profile.id;
+            // Update existing user
             user.discordUsername = profile.username;
             user.discordAvatar = profile.avatar;
-            user.discordAccessToken = accessToken;
-            user.discordRefreshToken = refreshToken;
             user.email = profile.email;
             user.lastLogin = new Date();
-            
-            // Ensure login type is set
-            if (!user.loginType) {
-                user.loginType = 'discord';
-            }
-            
-            // Check admin status
-            if (profile.email === config.ADMIN_EMAIL) {
-                user.isAdmin = true;
-                console.log('👑 Admin user detected:', profile.email);
-            }
-            
-            // Ensure coins are set
-            if (!user.coins || user.coins < 100) {
-                user.coins = 1000;
-            }
-            
-            await user.save();
-            console.log('✅ Updated existing user:', user.discordUsername, 'Email:', user.email);
         } else {
-            // Create new Discord user with all required fields
+            // Create new user
             user = new User({
                 discordId: profile.id,
                 discordUsername: profile.username,
                 discordAvatar: profile.avatar,
-                discordAccessToken: accessToken,
-                discordRefreshToken: refreshToken,
                 email: profile.email,
-                username: profile.username, // Save Discord username as username
+                username: profile.username,
                 loginType: 'discord',
                 coins: 1000,
                 isAdmin: profile.email === config.ADMIN_EMAIL,
-                createdBy: 'discord',
-                joinedDiscordServer: false,
                 serverCount: 0,
-                dailyRewardStreak: 0,
                 lastLogin: new Date()
             });
-            
-            await user.save();
-            console.log('✅ Created new Discord user:', user.discordUsername, 'Email:', user.email, 'Coins:', user.coins);
-            
-            // Create Pterodactyl user for new users
-            if (user.discordUsername) {
-                const pterodactylUserId = await createPterodactylUser(user.discordUsername);
-                if (pterodactylUserId) {
-                    user.pterodactylUserId = pterodactylUserId;
-                    await user.save();
-                    console.log('✅ Created Pterodactyl user:', pterodactylUserId);
-                }
-            }
-        }
-        
-        // Ensure Pterodactyl user exists for existing users
-        if (!user.pterodactylUserId && user.discordUsername) {
-            const pterodactylUserId = await createPterodactylUser(user.discordUsername);
-            if (pterodactylUserId) {
-                user.pterodactylUserId = pterodactylUserId;
-                console.log('✅ Created missing Pterodactyl user:', pterodactylUserId);
-            }
-        }
-        
-        // Check if user is already in server
-        const alreadyInServer = await checkUserInGuild(user.discordId);
-        
-        if (alreadyInServer) {
-            user.joinedDiscordServer = true;
-            console.log('✅ User already in Discord server:', user.discordId);
-        } else {
-            // Auto-join Discord server with retry logic
-            const joinResult = await joinDiscordServerWithRetry(user.discordId, accessToken, 3);
-            if (joinResult) {
-                user.joinedDiscordServer = true;
-            }
         }
         
         await user.save();
+        console.log('✅ User saved:', user.discordUsername);
         
         return done(null, user);
     } catch (error) {
-        console.error('❌ Discord OAuth error:', error.message);
+        console.error('❌ Discord OAuth error:', error);
         return done(error, null);
     }
 }));
@@ -343,122 +270,66 @@ app.get('/auth/discord', (req, res, next) => {
     })(req, res, next);
 });
 
-app.get('/auth/callback', (req, res, next) => {
-    passport.authenticate('discord', async (err, user, info) => {
-        if (err) {
-            console.error('❌ Discord auth error:', err.message);
-            return res.redirect('/?error=discord_auth_failed');
-        }
+app.get('/auth/callback', passport.authenticate('discord', {
+    failureRedirect: '/'
+}), async (req, res) => {
+    try {
+        const user = req.user;
+        console.log('✅ Discord callback success for:', user.discordUsername);
         
-        if (!user) {
-            console.error('❌ Discord auth failed: No user returned');
-            return res.redirect('/?error=discord_auth_failed');
-        }
+        // Create session
+        req.session.user = {
+            id: user._id.toString(),
+            username: user.discordUsername,
+            email: user.email,
+            discordId: user.discordId,
+            coins: user.coins,
+            isAdmin: user.isAdmin || false,
+            serverCount: user.serverCount || 0
+        };
         
-        try {
-            // Create complete session with all user data
-            req.session.user = {
-                id: user._id.toString(),
-                username: user.discordUsername || user.username,
-                email: user.email,
-                discordId: user.discordId,
-                discordAvatar: user.discordAvatar,
-                coins: user.coins || 1000,
-                pterodactylUserId: user.pterodactylUserId,
-                serverCount: user.serverCount || 0,
-                isAdmin: user.isAdmin || false,
-                loginType: 'discord',
-                joinedDiscordServer: user.joinedDiscordServer || false,
-                dailyRewardStreak: user.dailyRewardStreak || 0
-            };
-            
-            console.log('✅ DISCORD LOGIN SUCCESS:', {
-                id: user._id,
-                username: user.discordUsername,
-                email: user.email,
-                coins: user.coins,
-                isAdmin: user.isAdmin
-            });
-            
-            // Save session and redirect
-            req.session.save((saveErr) => {
-                if (saveErr) {
-                    console.error('❌ Session save error:', saveErr);
-                    return res.redirect('/?error=session_failed');
-                }
-                
-                console.log('✅ Session saved, redirecting to dashboard');
-                return res.redirect('/dashboard.html');
-            });
-            
-        } catch (error) {
-            console.error('❌ Callback error:', error);
-            return res.redirect('/?error=callback_failed');
-        }
-    })(req, res, next);
+        console.log('✅ Session created, redirecting to dashboard');
+        res.redirect('/dashboard.html');
+        
+    } catch (error) {
+        console.error('❌ Callback error:', error);
+        res.redirect('/');
+    }
 });
 
 // Discord-only authentication - username/password login removed
 // All authentication now goes through Discord OAuth2
 
-// User API - consistent data retrieval
+// User API - Get current user data
 app.get('/api/user', async (req, res) => {
-    // Check authentication using both session and passport
-    const isAuthenticated = (req.session && req.session.user) || req.user;
-    
-    if (!isAuthenticated) {
+    if (!req.session?.user?.id) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
     
     try {
-        // Get user ID from session or passport
-        let userId;
-        if (req.session?.user?.id) {
-            userId = req.session.user.id;
-        } else if (req.user) {
-            userId = req.user._id || req.user.id;
-        }
-        
-        if (!userId) {
-            return res.status(401).json({ error: 'No user ID found' });
-        }
-        
-        const user = await User.findById(userId);
+        const user = await User.findById(req.session.user.id);
         
         if (!user) {
-            if (req.session) {
-                req.session.destroy(() => {});
-            }
+            req.session.destroy(() => {});
             return res.status(401).json({ error: 'User not found' });
         }
         
         const userData = {
             id: user._id,
-            username: user.discordUsername || user.username,
+            username: user.discordUsername,
             email: user.email,
             discordId: user.discordId,
-            coins: user.coins || 1000,
-            pterodactylUserId: user.pterodactylUserId,
-            serverCount: user.serverCount || 0,
+            coins: user.coins,
             isAdmin: user.isAdmin || false,
-            loginType: user.loginType || 'discord'
+            serverCount: user.serverCount || 0,
+            loginType: 'discord'
         };
-        
-        // Update session with fresh data if session exists
-        if (req.session) {
-            req.session.user = userData;
-            req.session.save((err) => {
-                if (err) {
-                    console.error('Session save error in user API:', err);
-                }
-            });
-        }
         
         console.log('✅ User API response for:', userData.username);
         res.json(userData);
         
     } catch (error) {
-        console.error('User API error:', error.message);
+        console.error('User API error:', error);
         res.status(500).json({ error: 'Failed to get user data' });
     }
 });
@@ -697,23 +568,31 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
+// Debug endpoint
+app.get('/debug-session', (req, res) => {
+    res.json({
+        session: {
+            exists: !!req.session,
+            id: req.sessionID,
+            user: req.session?.user || null
+        },
+        passport: {
+            user: req.user || null
+        },
+        authenticated: req.isAuthenticated()
+    });
+});
+
 // Serve static files
 app.get('/', (req, res) => {
     console.log('🏠 Home page access');
-    console.log('Session exists:', !!req.session);
-    console.log('User in session:', req.session?.user?.username);
-    console.log('Passport user:', !!req.user);
     
-    // Check for existing authentication
-    const isAuthenticated = (req.session && req.session.user && req.session.user.id) || req.user;
-    
-    if (isAuthenticated) {
-        const username = req.session?.user?.username || req.user?.discordUsername || req.user?.username;
-        console.log('✅ User already logged in, redirecting to dashboard home:', username);
+    if (req.session?.user?.id) {
+        console.log('✅ User logged in, redirecting to dashboard');
         return res.redirect('/dashboard.html');
     }
     
-    console.log('🔐 No valid session, serving login page');
+    console.log('🔐 No session, serving login page');
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -749,9 +628,13 @@ app.get('/dashboard', (req, res) => {
     res.redirect('/dashboard.html');
 });
 
-// Discord OAuth2 test page
+// Test pages
 app.get('/test-discord', (req, res) => {
     res.sendFile(path.join(__dirname, 'test-discord.html'));
+});
+
+app.get('/test-login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'test-login.html'));
 });
 
 // API route to get user servers
