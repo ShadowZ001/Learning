@@ -386,15 +386,11 @@ app.get('/auth/callback', (req, res, next) => {
                     return res.redirect('/?error=session_save_failed');
                 }
                 
-                console.log('✅ Session saved successfully, redirecting to dashboard');
+                console.log('✅ Session saved successfully, redirecting to dashboard home');
                 console.log('✅ Session ID:', req.sessionID);
                 
-                // Use 302 redirect to ensure proper redirect
-                res.writeHead(302, {
-                    'Location': '/dashboard.html',
-                    'Set-Cookie': req.session.cookie.serialize('blazenode.sid', req.sessionID)
-                });
-                res.end();
+                // Redirect to dashboard home page
+                res.redirect('/dashboard.html#home');
             });
         });
     })(req, res, next);
@@ -663,8 +659,8 @@ app.get('/', (req, res) => {
     
     if (isAuthenticated) {
         const username = req.session?.user?.username || req.user?.discordUsername || req.user?.username;
-        console.log('✅ User already logged in, redirecting to dashboard:', username);
-        return res.redirect('/dashboard.html');
+        console.log('✅ User already logged in, redirecting to dashboard home:', username);
+        return res.redirect('/dashboard.html#home');
     }
     
     console.log('🔐 No valid session, serving login page');

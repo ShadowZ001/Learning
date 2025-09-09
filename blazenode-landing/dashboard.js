@@ -36,6 +36,14 @@ class Dashboard {
                 return;
             }
             
+            // Check URL hash and show appropriate page
+            const hash = window.location.hash.substring(1);
+            if (hash && hash !== 'home') {
+                this.showPage(hash);
+            } else {
+                this.showPage('home');
+            }
+            
             // Load dashboard data in parallel
             await Promise.all([
                 this.loadServers(),

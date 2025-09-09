@@ -168,6 +168,25 @@ body {
     color: #888888;
 }
 
+.home-btn {
+    padding: 8px 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.home-btn:hover {
+    background: #2563eb;
+}
+
 .logout-btn {
     padding: 8px 16px;
     background: #ef4444;
