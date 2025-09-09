@@ -300,14 +300,17 @@ async function getUserServers(pterodactylUserId) {
     }
 }
 
-// Discord OAuth2 routes with state parameter for security
+// Discord OAuth2 routes with enhanced security
 app.get('/auth/discord', (req, res, next) => {
+    console.log('🔐 Discord OAuth2 login initiated');
+    
     // Generate state parameter for CSRF protection
     const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     req.session.oauthState = state;
     
     passport.authenticate('discord', {
-        state: state
+        state: state,
+        scope: ['identify', 'email', 'guilds.join']
     })(req, res, next);
 });
 
@@ -350,7 +353,15 @@ app.get('/auth/callback', (req, res, next) => {
                 
                 // Redirect with success and join status
                 const joinStatus = user.joinedDiscordServer ? 'joined' : 'not_joined';
-                res.redirect(`/dashboard.html?login=discord_success&discord_join=${joinStatus}`);
+                const isNewUser = user.createdAt && (Date.now() - new Date(user.createdAt).getTime()) < 60000;
+                
+                console.log('✅ Discord OAuth2 redirect:', {
+                    user: user.discordUsername,
+                    joinStatus,
+                    isNewUser
+                });
+                
+                res.redirect(`/dashboard.html?login=discord_success&discord_join=${joinStatus}&new_user=${isNewUser}`);
                 
             } catch (sessionError) {
                 console.error('❌ Session setup error:', sessionError.message);
@@ -662,6 +673,11 @@ app.get('/dashboard.html', (req, res) => {
 
 app.get('/dashboard', (req, res) => {
     res.redirect('/dashboard.html');
+});
+
+// Discord OAuth2 test page
+app.get('/test-discord', (req, res) => {
+    res.sendFile(path.join(__dirname, 'test-discord.html'));
 });
 
 // API route to get user servers
