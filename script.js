@@ -53,12 +53,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (urlParams.get('login') === 'discord_success') {
         const discordJoin = urlParams.get('discord_join');
+        const isNewUser = urlParams.get('new_user') === 'true';
+        
         let message = '🎉 Discord login successful!';
         
+        if (isNewUser) {
+            message = '🎆 Welcome to BlazeNode! Account created successfully!';
+        }
+        
         if (discordJoin === 'joined') {
-            message += ' You\'ve been added to our Discord server!';
+            message += ' 💬 Check your Discord DMs for welcome info!';
         } else if (discordJoin === 'not_joined') {
-            message += ' Note: Could not auto-join Discord server.';
+            message += ' ⚠️ Could not auto-join Discord server.';
         }
         
         showNotification(message, 'success');
@@ -125,7 +131,7 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (data.success) {
-            showNotification('Login successful!', 'success');
+            showNotification('✅ Username login successful!', 'success');
             window.location.href = '/dashboard.html';
         } else {
             showNotification(data.error || 'Login failed', 'error');

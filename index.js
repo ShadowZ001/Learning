@@ -7,7 +7,7 @@ const path = require('path');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const config = require('./config');
-const { joinDiscordServerWithRetry, validateDiscordBot } = require('./auth/discord');
+const { joinDiscordServerWithRetry, validateDiscordBot, checkUserInGuild, refreshDiscordToken } = require('./auth/discord');
 
 const User = require('./models/User');
 const Coupon = require('./models/Coupon');
@@ -193,12 +193,21 @@ passport.use(new DiscordStrategy({
             console.log('✅ Created new Discord user:', user.discordUsername);
         }
         
-        // Auto-join Discord server with retry logic
-        const joinResult = await joinDiscordServerWithRetry(user.discordId, accessToken, 3);
-        if (joinResult) {
+        // Check if user is already in server
+        const alreadyInServer = await checkUserInGuild(user.discordId);
+        
+        if (alreadyInServer) {
             user.joinedDiscordServer = true;
-            await user.save();
+            console.log('✅ User already in Discord server:', user.discordId);
+        } else {
+            // Auto-join Discord server with retry logic
+            const joinResult = await joinDiscordServerWithRetry(user.discordId, accessToken, 3);
+            if (joinResult) {
+                user.joinedDiscordServer = true;
+            }
         }
+        
+        await user.save();
         
         return done(null, user);
     } catch (error) {
