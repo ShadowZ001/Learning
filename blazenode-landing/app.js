@@ -1,13 +1,17 @@
 // cPanel Entry Point for BlazeNode Dashboard
-const app = require('./index');
+// This file ensures compatibility with cPanel hosting
 
-// cPanel will handle the port automatically
-const PORT = process.env.PORT || 3000;
-
-const server = app.listen(PORT, () => {
-    console.log(`🚀 BlazeNode Dashboard running on cPanel`);
-    console.log(`📊 Port: ${PORT}`);
-});
+const app = require('./index.js');
 
 // Export for cPanel
 module.exports = app;
+
+// Start server if run directly
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🚀 BlazeNode Dashboard running on port ${PORT}`);
+        console.log(`✅ Discord OAuth2 Login Only`);
+        console.log(`🔗 Login URL: http://localhost:${PORT}`);
+    });
+}

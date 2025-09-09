@@ -57,48 +57,75 @@ class Dashboard {
         }
     }
 
-    // Load user data
+    // Load user data with retry mechanism
     async loadUserData() {
         try {
             console.log('👤 Fetching user data...');
             
-            const response = await fetch('/api/user', {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
-                }
-            });
+            // Add retry mechanism for user data loading
+            let attempts = 0;
+            const maxAttempts = 3;
             
-            console.log('User API response status:', response.status);
-            
-            if (response.ok) {
-                this.currentUser = await response.json();
-                console.log('✅ User data loaded:', this.currentUser.username);
+            while (attempts < maxAttempts) {
+                attempts++;
                 
-                // Update username immediately
-                const usernameEl = document.getElementById('username');
-                if (usernameEl) {
-                    usernameEl.textContent = this.currentUser.username;
-                }
-                
-                // Show admin menu if user is shadow
-                if (this.currentUser.username === 'shadow') {
-                    const adminMenu = document.querySelector('.admin-only');
-                    if (adminMenu) {
-                        adminMenu.style.display = 'block';
+                const response = await fetch('/api/user', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
                     }
+                });
+                
+                console.log(`User API response status (attempt ${attempts}):`, response.status);
+                
+                if (response.ok) {
+                    this.currentUser = await response.json();
+                    console.log('✅ User data loaded:', this.currentUser.username);
+                    console.log('✅ User details:', {
+                        id: this.currentUser.id,
+                        email: this.currentUser.email,
+                        coins: this.currentUser.coins,
+                        isAdmin: this.currentUser.isAdmin
+                    });
+                    
+                    // Update username immediately
+                    const usernameEl = document.getElementById('username');
+                    if (usernameEl) {
+                        usernameEl.textContent = this.currentUser.username;
+                    }
+                    
+                    // Show admin menu if user is admin
+                    if (this.currentUser.isAdmin) {
+                        const adminMenu = document.querySelector('.admin-only');
+                        if (adminMenu) {
+                            adminMenu.style.display = 'block';
+                            console.log('✅ Admin menu shown for:', this.currentUser.email);
+                        }
+                    }
+                    
+                    // Update coins display
+                    this.updateCoinsDisplay();
+                    
+                    return true;
+                } else if (response.status === 401) {
+                    console.log('❌ User not authenticated, status:', response.status);
+                    const errorData = await response.text();
+                    console.log('❌ Response:', errorData);
+                    return false;
+                } else {
+                    // Server error, retry
+                    console.log(`⚠️ Server error (${response.status}), retrying...`);
+                    if (attempts < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+                        continue;
+                    }
+                    return false;
                 }
-                
-                // Update coins display
-                this.updateCoinsDisplay();
-                
-                return true;
-            } else {
-                console.log('❌ User not authenticated');
-                return false;
             }
+            
+            return false;
         } catch (error) {
             console.error('❌ Error loading user data:', error);
             return false;

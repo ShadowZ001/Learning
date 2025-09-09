@@ -711,6 +711,84 @@ body {
     }
 }
 
+/* Discord Login Styles */
+.login-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.login-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.login-divider span {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0 15px;
+    color: #888888;
+    font-size: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.discord-login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 20px;
+    background: linear-gradient(135deg, #5865f2, #4752c4);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(88, 101, 242, 0.3);
+}
+
+.login-info {
+    text-align: center;
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(88, 101, 242, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(88, 101, 242, 0.2);
+}
+
+.info-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.info-text i {
+    color: #5865f2;
+}
+
+.discord-login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(88, 101, 242, 0.4);
+    background: linear-gradient(135deg, #4752c4, #3c45a5);
+}
+
+.discord-login-btn i {
+    font-size: 20px;
+}
+
 /* AOS Animation Styles */
 [data-aos] {
     opacity: 0;

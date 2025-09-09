@@ -3,11 +3,37 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
-        required: true,
-        unique: true
+        sparse: true
     },
     password: {
         type: String,
+        sparse: true
+    },
+    email: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    discordId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    discordUsername: {
+        type: String
+    },
+    discordAvatar: {
+        type: String
+    },
+    discordAccessToken: {
+        type: String
+    },
+    discordRefreshToken: {
+        type: String
+    },
+    loginType: {
+        type: String,
+        enum: ['username', 'discord'],
         required: true
     },
     coins: {
@@ -16,11 +42,6 @@ const userSchema = new mongoose.Schema({
     },
     pterodactylUserId: {
         type: Number
-    },
-    discordId: {
-        type: String,
-        default: null,
-        sparse: true
     },
     serverCount: {
         type: Number,
@@ -40,6 +61,14 @@ const userSchema = new mongoose.Schema({
     createdBy: {
         type: String,
         default: 'web'
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
+    joinedDiscordServer: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

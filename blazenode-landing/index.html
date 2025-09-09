@@ -93,41 +93,21 @@
                         <div class="login-icon">
                             <i class="fas fa-user-circle"></i>
                         </div>
-                        <h2>Welcome Back</h2>
-                        <p class="login-subtitle">Sign in to access your game servers and manage your resources</p>
+                        <h2>Welcome to BlazeNode</h2>
+                        <p class="login-subtitle">Sign in with Discord to access your game servers and manage your resources</p>
                     </div>
                     
-                    <form id="loginForm" onsubmit="handleLogin(event)">
-                        <div class="form-group">
-                            <label for="username">
-                                <i class="fas fa-user"></i>
-                                Username
-                            </label>
-                            <input type="text" id="username" name="username" placeholder="Enter your username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="password">
-                                <i class="fas fa-lock"></i>
-                                Password
-                            </label>
-                            <div class="password-input-container">
-                                <input type="password" id="password" name="password" placeholder="Enter your password" required>
-                                <button type="button" class="password-toggle" onclick="togglePassword()">
-                                    <i class="fas fa-eye" id="passwordToggleIcon"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="login-btn">
-                            <span class="btn-text">
-                                <i class="fas fa-sign-in-alt"></i>
-                                Sign In
-                            </span>
-                            <div class="btn-loader">
-                                <div class="spinner"></div>
-                            </div>
-                        </button>
-                    </form>
+                    <a href="/auth/discord" class="discord-login-btn">
+                        <i class="fab fa-discord"></i>
+                        Continue with Discord
+                    </a>
+                    
+                    <div class="login-info">
+                        <p class="info-text">
+                            <i class="fas fa-info-circle"></i>
+                            Sign in with your Discord account to access the dashboard
+                        </p>
+                    </div>
                     
                     <div class="login-footer">
                         <div class="trust-indicators">

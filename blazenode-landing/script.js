@@ -47,45 +47,22 @@ function initAnimations() {
     });
 }
 
-// Simple login function
-async function handleLogin(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const loginBtn = form.querySelector('.login-btn');
-    const username = form.username.value;
-    const password = form.password.value;
-    
-    if (!username || !password) {
-        showNotification('Please enter username and password', 'error');
-        return;
+// Simplified login feedback - no URL parameters needed
+document.addEventListener('DOMContentLoaded', function() {
+    // Clean any URL parameters on load
+    if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
     
-    loginBtn.disabled = true;
-    loginBtn.textContent = 'Logging in...';
-    
-    try {
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('Login successful!', 'success');
-            window.location.href = '/dashboard.html';
-        } else {
-            showNotification(data.error || 'Login failed', 'error');
-        }
-    } catch (error) {
-        showNotification('Connection error', 'error');
-    } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
-    }
+    // Check if user just logged in (could add session storage check if needed)
+    console.log('🔐 Login page loaded');
+});
+
+// Discord-only authentication system
+// Redirect to Discord OAuth2 on page load if needed
+function checkAuthStatus() {
+    // This could check session status if needed
+    console.log('🔍 Checking authentication status');
 }
 
 // Show notification
@@ -280,19 +257,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Password toggle function
-function togglePassword() {
-    const passwordInput = document.getElementById('password');
-    const toggleIcon = document.getElementById('passwordToggleIcon');
-    
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        toggleIcon.className = 'fas fa-eye-slash';
-    } else {
-        passwordInput.type = 'password';
-        toggleIcon.className = 'fas fa-eye';
-    }
-}
+// Password toggle removed - Discord-only login
 
 // Add ripple animation
 const rippleStyle = document.createElement('style');
