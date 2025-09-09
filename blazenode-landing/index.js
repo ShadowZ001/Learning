@@ -104,15 +104,14 @@ app.use(express.static('.'));
 app.use(session({
     secret: config.SESSION_SECRET,
     resave: true,
-    saveUninitialized: false,
+    saveUninitialized: true,
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
         httpOnly: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        sameSite: 'lax'
-    },
-    rolling: true // Reset expiration on activity
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'none'
+    }
 }));
 
 // Session middleware with enhanced authentication check
@@ -300,14 +299,11 @@ app.get('/auth/callback', (req, res, next) => {
                 serverCount: user.serverCount || 0
             };
             
-            // Force save session before redirect
-            req.session.save((saveErr) => {
-                if (saveErr) {
-                    console.error('❌ Session save error:', saveErr);
-                }
-                console.log('✅ Session saved, redirecting to dashboard');
-                res.redirect('/dashboard.html');
-            });
+            console.log('✅ Session created:', req.session.user);
+            console.log('✅ Redirecting to dashboard');
+            
+            // Direct redirect without waiting for save
+            return res.redirect('/dashboard.html');
         });
     })(req, res, next);
 });
@@ -613,19 +609,17 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/dashboard.html', async (req, res) => {
-    console.log('📋 Dashboard access attempt');
-    console.log('Session exists:', !!req.session);
+app.get('/dashboard.html', (req, res) => {
+    console.log('📋 Dashboard access');
     console.log('Session user:', req.session?.user?.username);
-    console.log('Session ID:', req.sessionID);
     
-    // Check authentication
-    if (!req.session || !req.session.user || !req.session.user.id) {
-        console.log('❌ No valid session, redirecting to login');
+    // Simple check - if no user in session, redirect
+    if (!req.session?.user?.id) {
+        console.log('❌ No session, redirect to login');
         return res.redirect('/');
     }
     
-    console.log('✅ Valid session found, serving dashboard');
+    console.log('✅ Serving dashboard');
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
