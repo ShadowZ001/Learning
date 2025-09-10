@@ -108,8 +108,8 @@ app.use(session({
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        httpOnly: false,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         sameSite: 'lax'
     }
 }));
@@ -117,23 +117,10 @@ app.use(session({
 // Enhanced session middleware with authentication check
 app.use((req, res, next) => {
     req.isAuthenticated = () => {
-        return (req.session?.authenticated && req.session?.user?.id) || (req.user && req.user._id);
+        const sessionAuth = req.session?.authenticated && req.session?.user?.id;
+        const passportAuth = req.user && req.user._id;
+        return sessionAuth || passportAuth;
     };
-    
-    // Sync passport user to session if session is missing but passport user exists
-    if (req.user && (!req.session?.user || !req.session?.authenticated)) {
-        req.session.authenticated = true;
-        req.session.user = {
-            id: req.user._id.toString(),
-            username: req.user.discordUsername,
-            email: req.user.email,
-            discordId: req.user.discordId,
-            coins: req.user.coins || 1000,
-            isAdmin: req.user.isAdmin || false,
-            serverCount: req.user.serverCount || 0
-        };
-        console.log('✅ Synced passport user to session:', req.user.discordUsername);
-    }
     
     next();
 });
@@ -288,45 +275,56 @@ app.get('/auth/discord', (req, res, next) => {
     passport.authenticate('discord')(req, res, next);
 });
 
-app.get('/auth/callback', passport.authenticate('discord', {
-    failureRedirect: '/?error=auth_failed'
-}), async (req, res) => {
-    try {
-        const user = req.user;
+app.get('/auth/callback', (req, res, next) => {
+    passport.authenticate('discord', (err, user, info) => {
+        if (err) {
+            console.error('❌ Auth error:', err);
+            return res.redirect('/?error=auth_failed');
+        }
+        
         if (!user) {
-            console.error('❌ No user in callback');
+            console.error('❌ No user returned from Discord');
             return res.redirect('/?error=no_user');
         }
         
-        console.log('✅ Discord callback success for:', user.discordUsername);
+        console.log('✅ Discord auth success for:', user.discordUsername);
         
-        // Create session
-        req.session.authenticated = true;
-        req.session.user = {
-            id: user._id.toString(),
-            username: user.discordUsername,
-            email: user.email,
-            discordId: user.discordId,
-            coins: user.coins || 1000,
-            isAdmin: user.isAdmin || false,
-            serverCount: user.serverCount || 0
-        };
-        
-        // Save session explicitly
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ Session save error:', err);
-                return res.redirect('/?error=session_failed');
+        // Login user with passport
+        req.logIn(user, (loginErr) => {
+            if (loginErr) {
+                console.error('❌ Login error:', loginErr);
+                return res.redirect('/?error=login_failed');
             }
             
-            console.log('✅ Session created and saved, redirecting to dashboard');
-            res.redirect('/dashboard.html');
+            console.log('✅ Passport login successful');
+            
+            // Create session data
+            req.session.authenticated = true;
+            req.session.user = {
+                id: user._id.toString(),
+                username: user.discordUsername,
+                email: user.email,
+                discordId: user.discordId,
+                coins: user.coins || 1000,
+                isAdmin: user.isAdmin || false,
+                serverCount: user.serverCount || 0
+            };
+            
+            console.log('✅ Session data created, saving...');
+            
+            // Force session save
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('❌ Session save error:', saveErr);
+                    return res.redirect('/?error=session_failed');
+                }
+                
+                console.log('✅ Session saved successfully, redirecting to dashboard');
+                res.redirect('/dashboard.html');
+            });
         });
         
-    } catch (error) {
-        console.error('❌ Callback error:', error);
-        res.redirect('/?error=callback_failed');
-    }
+    })(req, res, next);
 });
 
 // Discord-only authentication - username/password login removed
@@ -654,17 +652,43 @@ app.get('/', (req, res) => {
 
 app.get('/dashboard.html', (req, res) => {
     console.log('📋 Dashboard access attempt');
+    console.log('Session ID:', req.sessionID);
     console.log('Session exists:', !!req.session);
     console.log('Session authenticated:', req.session?.authenticated);
-    console.log('Session user:', req.session?.user?.username);
+    console.log('Session user ID:', req.session?.user?.id);
     console.log('Passport user:', req.user?.discordUsername);
     
-    // Check authentication - either session or passport
-    const isAuthenticated = (req.session?.authenticated && req.session?.user) || req.user;
+    // Enhanced authentication check
+    const sessionAuth = req.session?.authenticated && req.session?.user?.id;
+    const passportAuth = req.user && req.user._id;
     
-    if (!isAuthenticated) {
+    if (!sessionAuth && !passportAuth) {
         console.log('❌ Not authenticated, redirecting to login');
         return res.redirect('/');
+    }
+    
+    // If passport user exists but no session, create session
+    if (passportAuth && !sessionAuth) {
+        console.log('✅ Creating session from passport user');
+        req.session.authenticated = true;
+        req.session.user = {
+            id: req.user._id.toString(),
+            username: req.user.discordUsername,
+            email: req.user.email,
+            discordId: req.user.discordId,
+            coins: req.user.coins || 1000,
+            isAdmin: req.user.isAdmin || false,
+            serverCount: req.user.serverCount || 0
+        };
+        
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+            }
+            console.log('✅ Session created from passport, serving dashboard');
+            res.sendFile(path.join(__dirname, 'dashboard.html'));
+        });
+        return;
     }
     
     console.log('✅ User authenticated, serving dashboard');
