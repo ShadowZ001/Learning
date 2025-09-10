@@ -52,6 +52,48 @@ class AntiNukeSetupView(discord.ui.View):
             )
             view = PunishmentView(self.bot, self.guild)
             await interaction.response.edit_message(embed=embed, view=view)
+        
+        elif value == "whitelist":
+            embed = discord.Embed(
+                title="👥 Whitelist Management",
+                description="Manage trusted users who bypass AntiNuke protection",
+                color=0x95a5a6
+            )
+            embed.add_field(
+                name="ℹ️ Information",
+                value="Use the commands below to manage whitelisted users:\n\n• `/antinuke whitelist add <user>` - Add trusted user\n• `/antinuke whitelist remove <user>` - Remove user\n• `/antinuke whitelist list` - View all whitelisted users",
+                inline=False
+            )
+            embed = add_dravon_footer(embed)
+            await interaction.response.edit_message(embed=embed, view=None)
+        
+        elif value == "logs":
+            embed = discord.Embed(
+                title="📝 Logging Configuration",
+                description="Set up security event logging",
+                color=0x7289da
+            )
+            embed.add_field(
+                name="ℹ️ Information",
+                value="Use the command below to set up logging:\n\n• `/antinuke logs <channel>` - Set logs channel\n• `/antinuke logs` - View current logs channel",
+                inline=False
+            )
+            embed = add_dravon_footer(embed)
+            await interaction.response.edit_message(embed=embed, view=None)
+        
+        elif value == "alerts":
+            embed = discord.Embed(
+                title="🚨 Auto Alerts Configuration",
+                description="Configure automatic owner notifications",
+                color=0xff8c00
+            )
+            embed.add_field(
+                name="ℹ️ Information",
+                value="Auto alerts are automatically enabled when AntiNuke is active.\n\nThe server owner will receive DM notifications for:\n• Critical security threats\n• Emergency lockdowns\n• System configuration changes",
+                inline=False
+            )
+            embed = add_dravon_footer(embed)
+            await interaction.response.edit_message(embed=embed, view=None)
 
 class ToggleView(discord.ui.View):
     def __init__(self, bot, guild):
@@ -317,9 +359,18 @@ class AntiNuke(commands.Cog):
             await ctx.send(embed=embed)
     
     @antinuke_group.command(name="setup")
-    @commands.has_permissions(manage_guild=True)
     async def antinuke_setup(self, ctx):
-        """Interactive AntiNuke setup wizard"""
+        """Interactive AntiNuke setup wizard (Whitelisted users only)"""
+        # Check if user has permission
+        if ctx.author.id != ctx.guild.owner_id and not await self.bot.db.has_antinuke_access(ctx.guild.id, ctx.author.id):
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="**🔒 Restricted Command**\n\nOnly whitelisted users can access AntiNuke setup.\n\n**How to get access:**\nAsk the server owner to whitelist you using `/whitelist`",
+                color=0xff0000
+            )
+            embed.set_footer(text="AntiNuke v6.0 • Access Restriction • Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
+            await ctx.send(embed=embed)
+            return
         embed = discord.Embed(
             title="🛡️ Dravon™ AntiNuke v6.0 Setup Wizard",
             description="**🚀 Advanced Server Protection System**\n\nProtect your server from malicious attacks, raids, and unauthorized actions with our state-of-the-art security system.\n\n**🔥 Key Features:**\n• Real-time threat detection\n• Intelligent punishment system\n• Whitelist management\n• Advanced logging\n• Emergency lockdown\n• Owner notifications",
@@ -344,7 +395,6 @@ class AntiNuke(commands.Cog):
             inline=True
         )
         
-        embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413146132405817487/f41e57df-936d-428a-8aa8-a0b4ca2a1e64.jpg?ex=68bade64&is=68b98ce4&hm=b47dca3ee7abd906adf59b9a6974c047a2ee5079928e6b3ba37255ea7b9945f7&")
         embed.set_footer(text="AntiNuke v6.0 • Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
         
         # Add loading animation

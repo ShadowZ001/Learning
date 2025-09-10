@@ -119,7 +119,7 @@ class ServerInfo(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.hybrid_command(name="si")
+    @commands.hybrid_command(name="serverinfo", aliases=["si"])
     async def server_info(self, ctx):
         guild = ctx.guild
         

@@ -269,6 +269,11 @@ app.get('/auth/callback', passport.authenticate('discord', {
 }), (req, res) => {
     try {
         const user = req.user;
+        if (!user) {
+            console.error('❌ No user in callback');
+            return res.redirect('/');
+        }
+        
         console.log('✅ Discord callback success for:', user.discordUsername);
         
         // Create session
@@ -278,13 +283,21 @@ app.get('/auth/callback', passport.authenticate('discord', {
             username: user.discordUsername,
             email: user.email,
             discordId: user.discordId,
-            coins: user.coins,
+            coins: user.coins || 1000,
             isAdmin: user.isAdmin || false,
             serverCount: user.serverCount || 0
         };
         
-        console.log('✅ Session created, redirecting to dashboard');
-        res.redirect('/dashboard.html');
+        // Save session and redirect
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+                return res.redirect('/');
+            }
+            
+            console.log('✅ Session saved, redirecting to dashboard');
+            res.redirect('/dashboard.html');
+        });
         
     } catch (error) {
         console.error('❌ Callback error:', error);
@@ -592,31 +605,20 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/dashboard.html', async (req, res) => {
+app.get('/dashboard.html', (req, res) => {
     console.log('📋 Dashboard access attempt');
+    console.log('Session exists:', !!req.session);
+    console.log('Session user:', req.session?.user?.username);
+    console.log('Session authenticated:', req.session?.authenticated);
     
     // Check if user is authenticated
-    if (!req.session?.user?.id) {
-        console.log('❌ No session, redirecting to login');
+    if (!req.session?.authenticated || !req.session?.user?.id) {
+        console.log('❌ Not authenticated, redirecting to login');
         return res.redirect('/');
     }
     
-    try {
-        // Verify user exists in database
-        const user = await User.findById(req.session.user.id);
-        if (!user) {
-            console.log('❌ User not found, destroying session');
-            req.session.destroy(() => {});
-            return res.redirect('/');
-        }
-        
-        console.log('✅ Serving dashboard for:', user.discordUsername);
-        res.sendFile(path.join(__dirname, 'dashboard.html'));
-        
-    } catch (error) {
-        console.error('❌ Dashboard error:', error);
-        res.redirect('/');
-    }
+    console.log('✅ User authenticated, serving dashboard for:', req.session.user.username);
+    res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
 app.get('/dashboard', (req, res) => {

@@ -30,7 +30,7 @@ class BotInfo(commands.Cog):
         self.bot = bot
         self.start_time = time.time()
     
-    @commands.hybrid_command(name="botinfo")
+    @commands.hybrid_command(name="botinfo", aliases=["bi"])
     async def botinfo(self, ctx):
         """Display bot information"""
         

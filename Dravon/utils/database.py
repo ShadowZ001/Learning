@@ -448,3 +448,92 @@ class Database:
         # Check database whitelist
         whitelist_data = await self.get_whitelist_user(guild_id, user_id)
         return whitelist_data is not None
+    
+    async def add_bot_admin(self, user_id: int):
+        """Add a bot admin"""
+        await self.db.bot_admins.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id, "added_at": datetime.now()}},
+            upsert=True
+        )
+    
+    async def remove_bot_admin(self, user_id: int):
+        """Remove a bot admin"""
+        await self.db.bot_admins.delete_one({"user_id": user_id})
+    
+    async def get_bot_admins(self) -> List[int]:
+        """Get all bot admin user IDs"""
+        cursor = self.db.bot_admins.find({})
+        admins = await cursor.to_list(length=None)
+        return [admin["user_id"] for admin in admins]
+    
+    async def is_bot_admin(self, user_id: int) -> bool:
+        """Check if user is a bot admin"""
+        # Main admin is always admin
+        if user_id == 1037768611126841405:
+            return True
+        
+        admin_data = await self.db.bot_admins.find_one({"user_id": user_id})
+        return admin_data is not None
+    
+    # Whitelist System Methods
+    async def add_whitelist_user(self, guild_id: int, user_id: int):
+        """Add user to guild whitelist"""
+        await self.db.whitelist_users.update_one(
+            {"guild_id": guild_id},
+            {"$addToSet": {"users": user_id}},
+            upsert=True
+        )
+    
+    async def remove_whitelist_user(self, guild_id: int, user_id: int) -> bool:
+        """Remove user from guild whitelist"""
+        result = await self.db.whitelist_users.update_one(
+            {"guild_id": guild_id},
+            {"$pull": {"users": user_id}}
+        )
+        return result.modified_count > 0
+    
+    async def get_whitelist_users(self, guild_id: int) -> List[int]:
+        """Get all whitelisted users for a guild"""
+        data = await self.db.whitelist_users.find_one({"guild_id": guild_id})
+        return data.get("users", []) if data else []
+    
+    async def is_whitelisted(self, guild_id: int, user_id: int) -> bool:
+        """Check if user is whitelisted"""
+        # Bot admin and guild owner are always whitelisted
+        if user_id == 1037768611126841405:
+            return True
+        
+        data = await self.db.whitelist_users.find_one({"guild_id": guild_id})
+        return user_id in data.get("users", []) if data else False
+    
+    # AntiNuke Whitelist Methods
+    async def add_antinuke_whitelist(self, guild_id: int, user_id: int):
+        """Add user to AntiNuke whitelist"""
+        await self.db.antinuke_whitelist.update_one(
+            {"guild_id": guild_id},
+            {"$addToSet": {"users": user_id}},
+            upsert=True
+        )
+    
+    async def remove_antinuke_whitelist(self, guild_id: int, user_id: int) -> bool:
+        """Remove user from AntiNuke whitelist"""
+        result = await self.db.antinuke_whitelist.update_one(
+            {"guild_id": guild_id},
+            {"$pull": {"users": user_id}}
+        )
+        return result.modified_count > 0
+    
+    async def get_antinuke_whitelist(self, guild_id: int) -> List[int]:
+        """Get all AntiNuke whitelisted users for a guild"""
+        data = await self.db.antinuke_whitelist.find_one({"guild_id": guild_id})
+        return data.get("users", []) if data else []
+    
+    async def has_antinuke_access(self, guild_id: int, user_id: int) -> bool:
+        """Check if user has AntiNuke setup access"""
+        # Bot admin and guild owner always have access
+        if user_id == 1037768611126841405:
+            return True
+        
+        data = await self.db.antinuke_whitelist.find_one({"guild_id": guild_id})
+        return user_id in data.get("users", []) if data else False

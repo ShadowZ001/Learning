@@ -130,7 +130,7 @@ class HelpView(discord.ui.View):
             )
             embed.add_field(
                 name="Commands",
-                value="`>play <song/url>` - Play music or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music and clear queue\n`>queue` - View current queue\n`>volume <1-100>` - Adjust volume\n\n**Features:** Interactive player, autoplay, shuffle, multi-platform support",
+                value="`>play <song/url>` - Play music or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music and clear queue\n`>queue` - View current queue\n`>volume <1-100>` - Adjust volume\n`>mhelp` - Detailed music help\n\n**Features:** Interactive player, autoplay, shuffle, multi-platform support",
                 inline=False
             )
         
@@ -142,7 +142,7 @@ class HelpView(discord.ui.View):
             )
             embed.add_field(
                 name="Commands",
-                value="`>kiss <user>` - Kiss someone with a cute anime GIF\n`>slap <user>` - Slap someone with an anime GIF\n`>kill <user>` - Playfully eliminate someone with a funny GIF\n\n**Features:** Random GIFs, different animations every time!",
+                value="`>kiss <user>` - Kiss someone with a cute anime GIF\n`>slap <user>` - Slap someone with an anime GIF\n`>kill <user>` - Playfully eliminate someone with a funny GIF\n`>hug <user>` - Give someone a warm hug\n\n**Features:** Random GIFs, different animations every time!",
                 inline=False
             )
         
@@ -166,7 +166,7 @@ class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.command(name="help")
+    @commands.hybrid_command(name="help")
     async def help_command(self, ctx):
         """Display bot help with categories"""
         
@@ -174,6 +174,18 @@ class Help(commands.Cog):
             title="🌟 Dravon Help Center",
             description="**Your all-in-one Discord server management solution**\n\nDravon offers comprehensive server management with advanced features including moderation, security, tickets, giveaways, premium perks, and much more!\n\n**📂 Command Categories:**\n🛡️ **Moderation** - Ban, kick, mute, warn users\n🔒 **Security** - AntiNuke protection system\n🎫 **Tickets** - Complete ticket management\n🎉 **Giveaways** - Falcon-style giveaway system\n⚙️ **Server Setup** - Welcome, leave, boost messages\n🤖 **AutoMod** - Automatic moderation\n📊 **Information** - Server and bot stats\n🎨 **Embed Builder** - Custom embed creation\n🎵 **Music Player** - Play music from multiple platforms\n🎮 **Fun Commands** - Interactive anime GIF commands\n💎 **Premium** - Exclusive premium features\n🔧 **Utility** - Prefix, purge, and more\n\n*Select a category from the dropdown below to view detailed commands!*",
             color=0x7289da
+        )
+        
+        embed.add_field(
+            name="🚀 Quick Commands",
+            value="• `>serverinfo` or `/serverinfo` - Server details\n• `>userinfo` or `/userinfo` - User information\n• `>botinfo` or `/botinfo` - Bot statistics\n• `>premium` or `/premium` - Premium features",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="⚙️ Setup Commands",
+            value="• `>antinuke setup` - Security system\n• `>automod setup` - Auto moderation\n• `>welcome setup` - Welcome messages\n• `>ticket setup` - Ticket system",
+            inline=True
         )
         
         embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413146132405817487/f41e57df-936d-428a-8aa8-a0b4ca2a1e64.jpg?ex=68bade64&is=68b98ce4&hm=b47dca3ee7abd906adf59b9a6974c047a2ee5079928e6b3ba37255ea7b9945f7&")
