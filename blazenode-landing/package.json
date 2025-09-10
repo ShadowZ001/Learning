@@ -1,59 +1,22 @@
 {
   "name": "blazenode-dashboard",
-  "version": "3.0.0",
-  "description": "BlazeNode Dashboard with Discord-Only OAuth2 Authentication, Server Management, and cPanel Compatibility",
-  "main": "app.js",
+  "version": "1.0.0",
+  "description": "BlazeNode Dashboard with Discord OAuth",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
-    "server": "node index.js",
-    "dev": "nodemon app.js",
-    "test-server": "node test-server.js",
-    "cpanel": "node app.js",
-    "build": "echo 'Production ready - no build required'",
-    "test": "node test-login-flow.js",
-    "test-login": "node test-login-flow.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "keywords": [
-    "blazenode",
-    "dashboard",
-    "pterodactyl",
-    "discord",
-    "oauth2",
-    "discord-only",
-    "server-management",
-    "gaming",
-    "hosting",
-    "cpanel",
-    "production"
-  ],
-  "author": "BlazeNode Team",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "express-session": "^1.17.3",
     "cors": "^2.8.5",
-    "mongoose": "^8.0.3",
-    "axios": "^1.6.2",
-    "passport": "^0.7.0",
+    "mongoose": "^7.5.0",
+    "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
-    "dotenv": "^16.3.1",
-    "connect-mongo": "^5.1.0",
-    "helmet": "^7.1.0",
-    "compression": "^1.7.4"
+    "axios": "^1.5.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ShadowZ001/Learning.git"
-  },
-  "homepage": "https://dash.blazenode.site",
-  "bugs": {
-    "url": "https://github.com/ShadowZ001/Learning/issues"
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
