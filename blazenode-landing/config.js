@@ -18,7 +18,7 @@ module.exports = {
     // Discord OAuth2 Configuration - FIXED
     DISCORD_CLIENT_ID: '1414622141705617583',
     DISCORD_CLIENT_SECRET: 'lwXQLgJdLy844a1ejcTwjhzUwH4MqDh',
-    DISCORD_REDIRECT_URI: process.env.NODE_ENV === 'production' ? 'https://dash.blazenode.site/auth/callback' : 'http://localhost:3000/auth/callback',
+    DISCORD_REDIRECT_URI: 'http://localhost:3000/auth/callback',
     DISCORD_GUILD_ID: '1413789539350118020',
     DISCORD_INVITE_LINK: 'https://discord.gg/PyfEzq5gQ',
     
