@@ -108,7 +108,7 @@ app.use(session({
     name: 'blazenode.sid',
     cookie: { 
         secure: false,
-        httpOnly: false,
+        httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         sameSite: 'lax'
     }
@@ -129,7 +129,7 @@ app.use((req, res, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Discord OAuth2 Strategy - Fixed
+// Discord OAuth2 Strategy - Fixed with better error handling
 passport.use(new DiscordStrategy({
     clientID: config.DISCORD_CLIENT_ID,
     clientSecret: config.DISCORD_CLIENT_SECRET,
@@ -137,7 +137,14 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('🔐 Discord OAuth for:', profile.username, profile.id);
+        console.log('🔐 Discord OAuth started for:', profile.username, profile.id);
+        console.log('🔍 Profile data:', JSON.stringify(profile, null, 2));
+        
+        // Validate required profile data
+        if (!profile.id || !profile.username) {
+            console.error('❌ Invalid Discord profile data');
+            return done(new Error('Invalid Discord profile'), null);
+        }
         
         // Ensure MongoDB is connected
         if (mongoose.connection.readyState !== 1) {
@@ -172,14 +179,14 @@ passport.use(new DiscordStrategy({
             });
         }
         
-        await user.save();
-        console.log('✅ User saved successfully:', user.discordUsername);
+        const savedUser = await user.save();
+        console.log('✅ User saved successfully:', savedUser.discordUsername, 'ID:', savedUser._id);
         
-        return done(null, user);
+        return done(null, savedUser);
     } catch (error) {
         console.error('❌ Discord OAuth error:', error.message);
-        console.error('❌ Stack:', error.stack);
-        return done(error, null);
+        console.error('❌ Error details:', error);
+        return done(null, false, { message: 'Authentication failed: ' + error.message });
     }
 }));
 
@@ -276,24 +283,33 @@ app.get('/auth/discord', (req, res, next) => {
 });
 
 app.get('/auth/callback', (req, res, next) => {
+    console.log('🔄 Discord callback received');
+    
     passport.authenticate('discord', (err, user, info) => {
+        console.log('🔍 Callback auth result:', { 
+            error: err?.message, 
+            user: user?.discordUsername, 
+            info: info?.message 
+        });
+        
         if (err) {
             console.error('❌ Auth error:', err);
-            return res.redirect('/?error=auth_failed');
+            return res.redirect('/?error=auth_failed&message=' + encodeURIComponent(err.message));
         }
         
         if (!user) {
             console.error('❌ No user returned from Discord');
-            return res.redirect('/?error=no_user');
+            const errorMsg = info?.message || 'Discord authentication failed';
+            return res.redirect('/?error=no_user&message=' + encodeURIComponent(errorMsg));
         }
         
-        console.log('✅ Discord auth success for:', user.discordUsername);
+        console.log('✅ Discord authentication successful for:', user.discordUsername);
         
         // Login user with passport
         req.logIn(user, (loginErr) => {
             if (loginErr) {
                 console.error('❌ Login error:', loginErr);
-                return res.redirect('/?error=login_failed');
+                return res.redirect('/?error=login_failed&message=' + encodeURIComponent(loginErr.message));
             }
             
             console.log('✅ Passport login successful');
@@ -310,13 +326,13 @@ app.get('/auth/callback', (req, res, next) => {
                 serverCount: user.serverCount || 0
             };
             
-            console.log('✅ Session data created, saving...');
+            console.log('✅ Session data created:', req.session.user);
             
             // Force session save
             req.session.save((saveErr) => {
                 if (saveErr) {
                     console.error('❌ Session save error:', saveErr);
-                    return res.redirect('/?error=session_failed');
+                    return res.redirect('/?error=session_failed&message=' + encodeURIComponent(saveErr.message));
                 }
                 
                 console.log('✅ Session saved successfully, redirecting to dashboard');

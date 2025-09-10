@@ -54,18 +54,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const error = urlParams.get('error');
     
     if (error) {
+        const message = urlParams.get('message');
         let errorMessage = 'Login failed. Please try again.';
         
         switch(error) {
             case 'auth_failed':
-                errorMessage = 'Discord authentication failed. Please try again.';
+                errorMessage = message ? `Discord authentication failed: ${decodeURIComponent(message)}` : 'Discord authentication failed. Please try again.';
+                break;
+            case 'no_user':
+                errorMessage = message ? `Authentication error: ${decodeURIComponent(message)}` : 'No user data received from Discord. Please try again.';
                 break;
             case 'login_failed':
-                errorMessage = 'Login process failed. Please try again.';
+                errorMessage = message ? `Login failed: ${decodeURIComponent(message)}` : 'Login process failed. Please try again.';
                 break;
             case 'session_failed':
-                errorMessage = 'Session creation failed. Please try again.';
+                errorMessage = message ? `Session error: ${decodeURIComponent(message)}` : 'Session creation failed. Please try again.';
                 break;
+            case 'callback_failed':
+                errorMessage = 'Authentication callback failed. Please try again.';
+                break;
+            default:
+                errorMessage = message ? decodeURIComponent(message) : 'An error occurred during login. Please try again.';
         }
         
         showNotification(errorMessage, 'error');

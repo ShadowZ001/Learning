@@ -26,5 +26,5 @@ module.exports = {
     ADMIN_EMAIL: 'dereckrich8@gmail.com',
     
     // Environment
-    NODE_ENV: 'production'
+    NODE_ENV: process.env.NODE_ENV || 'development'
 };
