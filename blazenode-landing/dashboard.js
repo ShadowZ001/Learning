@@ -30,11 +30,10 @@ class Dashboard {
             
             if (!userLoaded) {
                 console.log('❌ User not authenticated, redirecting to login');
-                window.location.href = '/';
                 return;
             }
             
-            // Show home page
+            // Show home page by default
             this.showPage('home');
             
             // Load dashboard data
@@ -44,7 +43,6 @@ class Dashboard {
             
         } catch (error) {
             console.error('❌ Dashboard init error:', error);
-            window.location.href = '/';
         }
     }
 
@@ -89,23 +87,16 @@ class Dashboard {
                 return true;
             } else if (response.status === 401) {
                 console.log('❌ User not authenticated, redirecting to login');
-                // Add small delay to prevent redirect loops
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 100);
+                window.location.href = '/';
                 return false;
             } else {
                 console.log('❌ Server error:', response.status);
-                // Retry once after a short delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return this.loadUserData();
+                window.location.href = '/';
+                return false;
             }
         } catch (error) {
             console.error('❌ Error loading user data:', error);
-            // Add small delay to prevent redirect loops
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 100);
+            window.location.href = '/';
             return false;
         }
     }
