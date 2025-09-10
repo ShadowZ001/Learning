@@ -129,7 +129,7 @@ app.use((req, res, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Discord OAuth2 Strategy - Fixed with better error handling
+// Discord OAuth2 Strategy - Simplified and Fixed
 passport.use(new DiscordStrategy({
     clientID: config.DISCORD_CLIENT_ID,
     clientSecret: config.DISCORD_CLIENT_SECRET,
@@ -137,20 +137,7 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('🔐 Discord OAuth started for:', profile.username, profile.id);
-        console.log('🔍 Profile data:', JSON.stringify(profile, null, 2));
-        
-        // Validate required profile data
-        if (!profile.id || !profile.username) {
-            console.error('❌ Invalid Discord profile data');
-            return done(new Error('Invalid Discord profile'), null);
-        }
-        
-        // Ensure MongoDB is connected
-        if (mongoose.connection.readyState !== 1) {
-            console.error('❌ MongoDB not connected during OAuth');
-            return done(new Error('Database not available'), null);
-        }
+        console.log('🔐 Discord OAuth for:', profile.username);
         
         // Find or create user
         let user = await User.findOne({ discordId: profile.id });
@@ -159,12 +146,10 @@ passport.use(new DiscordStrategy({
             // Update existing user
             user.discordUsername = profile.username;
             user.discordAvatar = profile.avatar;
-            user.email = profile.email || user.email;
+            user.email = profile.email;
             user.lastLogin = new Date();
-            console.log('✅ Updated existing user:', user.discordUsername);
         } else {
             // Create new user
-            console.log('✅ Creating new user for:', profile.username);
             user = new User({
                 discordId: profile.id,
                 discordUsername: profile.username,
@@ -179,14 +164,13 @@ passport.use(new DiscordStrategy({
             });
         }
         
-        const savedUser = await user.save();
-        console.log('✅ User saved successfully:', savedUser.discordUsername, 'ID:', savedUser._id);
+        await user.save();
+        console.log('✅ User saved:', user.discordUsername);
         
-        return done(null, savedUser);
+        return done(null, user);
     } catch (error) {
-        console.error('❌ Discord OAuth error:', error.message);
-        console.error('❌ Error details:', error);
-        return done(null, false, { message: 'Authentication failed: ' + error.message });
+        console.error('❌ Discord OAuth error:', error);
+        return done(error, null);
     }
 }));
 
@@ -282,65 +266,32 @@ app.get('/auth/discord', (req, res, next) => {
     passport.authenticate('discord')(req, res, next);
 });
 
-app.get('/auth/callback', (req, res, next) => {
-    console.log('🔄 Discord callback received');
-    
-    passport.authenticate('discord', (err, user, info) => {
-        console.log('🔍 Callback auth result:', { 
-            error: err?.message, 
-            user: user?.discordUsername, 
-            info: info?.message 
-        });
+app.get('/auth/callback', passport.authenticate('discord', {
+    failureRedirect: '/'
+}), async (req, res) => {
+    try {
+        const user = req.user;
+        console.log('✅ Discord callback success for:', user.discordUsername);
         
-        if (err) {
-            console.error('❌ Auth error:', err);
-            return res.redirect('/?error=auth_failed&message=' + encodeURIComponent(err.message));
-        }
+        // Create session
+        req.session.authenticated = true;
+        req.session.user = {
+            id: user._id.toString(),
+            username: user.discordUsername,
+            email: user.email,
+            discordId: user.discordId,
+            coins: user.coins,
+            isAdmin: user.isAdmin || false,
+            serverCount: user.serverCount || 0
+        };
         
-        if (!user) {
-            console.error('❌ No user returned from Discord');
-            const errorMsg = info?.message || 'Discord authentication failed';
-            return res.redirect('/?error=no_user&message=' + encodeURIComponent(errorMsg));
-        }
+        console.log('✅ Session created, redirecting to dashboard');
+        res.redirect('/dashboard.html');
         
-        console.log('✅ Discord authentication successful for:', user.discordUsername);
-        
-        // Login user with passport
-        req.logIn(user, (loginErr) => {
-            if (loginErr) {
-                console.error('❌ Login error:', loginErr);
-                return res.redirect('/?error=login_failed&message=' + encodeURIComponent(loginErr.message));
-            }
-            
-            console.log('✅ Passport login successful');
-            
-            // Create session data
-            req.session.authenticated = true;
-            req.session.user = {
-                id: user._id.toString(),
-                username: user.discordUsername,
-                email: user.email,
-                discordId: user.discordId,
-                coins: user.coins || 1000,
-                isAdmin: user.isAdmin || false,
-                serverCount: user.serverCount || 0
-            };
-            
-            console.log('✅ Session data created:', req.session.user);
-            
-            // Force session save
-            req.session.save((saveErr) => {
-                if (saveErr) {
-                    console.error('❌ Session save error:', saveErr);
-                    return res.redirect('/?error=session_failed&message=' + encodeURIComponent(saveErr.message));
-                }
-                
-                console.log('✅ Session saved successfully, redirecting to dashboard');
-                res.redirect('/dashboard.html');
-            });
-        });
-        
-    })(req, res, next);
+    } catch (error) {
+        console.error('❌ Callback error:', error);
+        res.redirect('/');
+    }
 });
 
 // Discord-only authentication - username/password login removed
@@ -666,49 +617,48 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/dashboard.html', (req, res) => {
+app.get('/dashboard.html', async (req, res) => {
     console.log('📋 Dashboard access attempt');
-    console.log('Session ID:', req.sessionID);
-    console.log('Session exists:', !!req.session);
-    console.log('Session authenticated:', req.session?.authenticated);
-    console.log('Session user ID:', req.session?.user?.id);
-    console.log('Passport user:', req.user?.discordUsername);
     
-    // Enhanced authentication check
-    const sessionAuth = req.session?.authenticated && req.session?.user?.id;
-    const passportAuth = req.user && req.user._id;
-    
-    if (!sessionAuth && !passportAuth) {
-        console.log('❌ Not authenticated, redirecting to login');
+    // Check if user is authenticated
+    if (!req.session?.user?.id && !req.user) {
+        console.log('❌ No authentication, redirecting to login');
         return res.redirect('/');
     }
     
-    // If passport user exists but no session, create session
-    if (passportAuth && !sessionAuth) {
-        console.log('✅ Creating session from passport user');
-        req.session.authenticated = true;
-        req.session.user = {
-            id: req.user._id.toString(),
-            username: req.user.discordUsername,
-            email: req.user.email,
-            discordId: req.user.discordId,
-            coins: req.user.coins || 1000,
-            isAdmin: req.user.isAdmin || false,
-            serverCount: req.user.serverCount || 0
-        };
+    try {
+        // Get user ID from session or passport
+        const userId = req.session?.user?.id || req.user?._id;
         
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ Session save error:', err);
-            }
-            console.log('✅ Session created from passport, serving dashboard');
-            res.sendFile(path.join(__dirname, 'dashboard.html'));
-        });
-        return;
+        // Verify user exists in database
+        const user = await User.findById(userId);
+        if (!user) {
+            console.log('❌ User not found in database, destroying session');
+            req.session.destroy(() => {});
+            return res.redirect('/');
+        }
+        
+        // Ensure session exists
+        if (!req.session?.user) {
+            req.session.authenticated = true;
+            req.session.user = {
+                id: user._id.toString(),
+                username: user.discordUsername,
+                email: user.email,
+                discordId: user.discordId,
+                coins: user.coins,
+                isAdmin: user.isAdmin || false,
+                serverCount: user.serverCount || 0
+            };
+        }
+        
+        console.log('✅ Serving dashboard for:', user.discordUsername);
+        res.sendFile(path.join(__dirname, 'dashboard.html'));
+        
+    } catch (error) {
+        console.error('❌ Dashboard error:', error.message);
+        res.redirect('/');
     }
-    
-    console.log('✅ User authenticated, serving dashboard');
-    res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
 app.get('/dashboard', (req, res) => {
