@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const path = require('path');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
+const LocalStrategy = require('passport-local').Strategy;
+const bcrypt = require('bcrypt');
 const config = require('./config');
 
 const User = require('./models/User');
@@ -26,28 +28,6 @@ async function connectMongoDB() {
 }
 
 connectMongoDB();
-
-// Create admin user
-async function createAdminUser() {
-    try {
-        const adminExists = await User.findOne({ username: 'dev_shadowz' });
-        if (!adminExists) {
-            const admin = new User({
-                username: 'dev_shadowz',
-                password: 'shadowz', // Plain text for simplicity
-                email: 'admin@blazenode.site',
-                loginType: 'local',
-                isAdmin: true,
-                coins: 10000,
-                serverCount: 0
-            });
-            await admin.save();
-            console.log('✅ Admin user created: dev_shadowz / shadowz');
-        }
-    } catch (error) {
-        console.error('❌ Admin creation failed:', error.message);
-    }
-}
 
 // Middleware
 app.use(cors({
@@ -81,7 +61,57 @@ app.use((req, res, next) => {
     next();
 });
 
-// Discord Strategy - FIXED WITH DETAILED LOGGING
+// Create admin user on startup
+async function createAdminUser() {
+    try {
+        const adminExists = await User.findOne({ username: 'dev_shadowz' });
+        if (!adminExists) {
+            const hashedPassword = await bcrypt.hash('shadowz', 10);
+            const admin = new User({
+                username: 'dev_shadowz',
+                password: hashedPassword,
+                email: 'admin@blazenode.site',
+                loginType: 'local',
+                isAdmin: true,
+                coins: 10000,
+                serverCount: 0
+            });
+            await admin.save();
+            console.log('✅ Admin user created: dev_shadowz');
+        }
+    } catch (error) {
+        console.error('❌ Admin creation failed:', error.message);
+    }
+}
+
+// Local Strategy for admin login
+passport.use(new LocalStrategy(
+    async (username, password, done) => {
+        try {
+            console.log('🔐 Local login attempt:', username);
+            
+            const user = await User.findOne({ username: username.toLowerCase() });
+            if (!user) {
+                console.log('❌ User not found:', username);
+                return done(null, false, { message: 'Invalid credentials' });
+            }
+            
+            const isValid = await bcrypt.compare(password, user.password);
+            if (!isValid) {
+                console.log('❌ Invalid password for:', username);
+                return done(null, false, { message: 'Invalid credentials' });
+            }
+            
+            console.log('✅ Local login success:', username);
+            return done(null, user);
+        } catch (error) {
+            console.error('❌ Local auth error:', error);
+            return done(error);
+        }
+    }
+));
+
+// Discord Strategy - FIXED
 passport.use(new DiscordStrategy({
     clientID: config.DISCORD_CLIENT_ID,
     clientSecret: config.DISCORD_CLIENT_SECRET,
@@ -89,35 +119,32 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('🔐 Discord OAuth callback received');
-        console.log('👤 Profile ID:', profile.id);
-        console.log('👤 Profile Username:', profile.username);
-        console.log('📧 Profile Email:', profile.email);
-        console.log('🔗 Using callback URL:', config.DISCORD_REDIRECT_URI);
+        console.log('🔐 Discord OAuth for:', profile.username, profile.id);
+        console.log('📧 Discord email:', profile.email);
+        console.log('🔗 Callback URL used:', config.DISCORD_REDIRECT_URI);
         
-        // Check database connection
+        // Ensure database connection
         if (mongoose.connection.readyState !== 1) {
-            console.log('⚠️ Database not connected, attempting reconnection...');
+            console.log('⚠️ Reconnecting to database...');
             await connectMongoDB();
         }
         
         if (mongoose.connection.readyState !== 1) {
-            console.error('❌ Database connection failed during OAuth');
-            return done(new Error('Database connection failed'), null);
+            console.error('❌ Database connection failed');
+            return done(new Error('Database unavailable'), null);
         }
-        
-        console.log('✅ Database connected, proceeding with user lookup');
         
         let user = await User.findOne({ discordId: profile.id });
         
         if (user) {
-            console.log('📝 Found existing user:', user.discordUsername);
+            // Update existing user
             user.discordUsername = profile.username;
             user.discordAvatar = profile.avatar;
             user.email = profile.email || user.email;
             user.lastLogin = new Date();
+            console.log('📝 Updating user:', profile.username);
         } else {
-            console.log('🆕 Creating new user for:', profile.username);
+            // Create new user
             user = new User({
                 discordId: profile.id,
                 discordUsername: profile.username,
@@ -131,77 +158,62 @@ passport.use(new DiscordStrategy({
                 lastLogin: new Date(),
                 createdAt: new Date()
             });
+            console.log('🆕 Creating user:', profile.username);
         }
         
         const savedUser = await user.save();
-        console.log('✅ User saved successfully:', savedUser.discordUsername, savedUser._id);
-        console.log('🎯 Returning user to callback');
+        console.log('✅ User saved:', savedUser.discordUsername, savedUser._id);
         return done(null, savedUser);
         
     } catch (error) {
-        console.error('❌ Discord OAuth Strategy Error:');
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        return done(error, null);
+        console.error('❌ Discord OAuth error:', error.message);
+        console.error('Stack:', error.stack);
+        return done(new Error('Discord authentication failed'), null);
     }
 }));
 
 passport.serializeUser((user, done) => {
-    console.log('🔄 Serializing user:', user._id);
     done(null, user._id);
 });
 
 passport.deserializeUser(async (id, done) => {
     try {
-        console.log('🔄 Deserializing user:', id);
         const user = await User.findById(id);
         done(null, user);
     } catch (error) {
-        console.error('❌ Deserialize error:', error);
         done(error, null);
     }
 });
 
-// Initialize admin user after delay
-setTimeout(createAdminUser, 3000);
+// Initialize admin user
+setTimeout(createAdminUser, 2000);
 
 // Auth Routes
 app.get('/auth/discord', (req, res, next) => {
     console.log('🔐 Discord OAuth initiated');
-    console.log('🔗 Client ID:', config.DISCORD_CLIENT_ID);
-    console.log('🔗 Redirect URI:', config.DISCORD_REDIRECT_URI);
     passport.authenticate('discord')(req, res, next);
 });
 
 app.get('/auth/callback', (req, res, next) => {
-    console.log('🔄 Discord callback route hit');
-    console.log('📝 Query params:', req.query);
-    
+    console.log('🔄 Discord callback received');
     passport.authenticate('discord', (err, user, info) => {
-        console.log('🔄 Passport authenticate callback');
-        console.log('❓ Error:', err);
-        console.log('👤 User:', user ? user._id : 'null');
-        console.log('ℹ️ Info:', info);
-        
         if (err) {
-            console.error('❌ Discord authentication error:', err.message);
+            console.error('❌ Discord auth error:', err.message);
             return res.redirect('/?error=discord_auth_failed&message=' + encodeURIComponent(err.message));
         }
         
         if (!user) {
-            console.error('❌ No user returned from Discord');
-            return res.redirect('/?error=discord_no_user&message=' + encodeURIComponent('Discord authentication failed - no user data'));
+            console.error('❌ No user from Discord:', info);
+            return res.redirect('/?error=discord_no_user&message=' + encodeURIComponent('Discord authentication failed'));
         }
-        
-        console.log('✅ User received, attempting login');
         
         req.logIn(user, (loginErr) => {
             if (loginErr) {
-                console.error('❌ req.logIn error:', loginErr);
+                console.error('❌ Login error:', loginErr);
                 return res.redirect('/?error=login_failed&message=' + encodeURIComponent('Login process failed'));
             }
             
-            console.log('✅ req.logIn successful');
+            console.log('✅ Discord user logged in:', user._id);
             
             // Create session
             req.session.authenticated = true;
@@ -216,55 +228,54 @@ app.get('/auth/callback', (req, res, next) => {
                 loginType: 'discord'
             };
             
-            console.log('✅ Session created for:', req.session.user.username);
             console.log('🔄 Redirecting to dashboard...');
-            
             return res.redirect('/dashboard');
         });
     })(req, res, next);
 });
 
-// Simple local login
-app.post('/auth/login', async (req, res) => {
-    const { username, password } = req.body;
+// Local login route
+app.post('/auth/login', (req, res, next) => {
+    console.log('🔐 Local login attempt for:', req.body.username);
     
-    console.log('🔐 Local login attempt:', username);
-    
-    try {
-        const user = await User.findOne({ 
-            username: username.toLowerCase(),
-            loginType: 'local'
-        });
-        
-        if (!user || user.password !== password) {
-            console.log('❌ Invalid credentials for:', username);
-            return res.status(401).json({ error: 'Invalid credentials' });
+    passport.authenticate('local', (err, user, info) => {
+        if (err) {
+            console.error('❌ Local auth error:', err);
+            return res.status(500).json({ error: 'Authentication error' });
         }
         
-        console.log('✅ Local login success:', username);
+        if (!user) {
+            console.log('❌ Local login failed:', info?.message);
+            return res.status(401).json({ error: info?.message || 'Invalid credentials' });
+        }
         
-        // Create session
-        req.session.authenticated = true;
-        req.session.user = {
-            id: user._id.toString(),
-            username: user.username,
-            email: user.email,
-            coins: user.coins || 0,
-            isAdmin: user.isAdmin || false,
-            serverCount: user.serverCount || 0,
-            loginType: 'local'
-        };
-        
-        res.json({ 
-            success: true, 
-            user: req.session.user,
-            redirect: '/dashboard'
+        req.logIn(user, (loginErr) => {
+            if (loginErr) {
+                console.error('❌ Local login error:', loginErr);
+                return res.status(500).json({ error: 'Login failed' });
+            }
+            
+            console.log('✅ Local user logged in:', user.username);
+            
+            // Create session
+            req.session.authenticated = true;
+            req.session.user = {
+                id: user._id.toString(),
+                username: user.username,
+                email: user.email,
+                coins: user.coins || 0,
+                isAdmin: user.isAdmin || false,
+                serverCount: user.serverCount || 0,
+                loginType: 'local'
+            };
+            
+            res.json({ 
+                success: true, 
+                user: req.session.user,
+                redirect: '/dashboard'
+            });
         });
-        
-    } catch (error) {
-        console.error('❌ Local login error:', error);
-        res.status(500).json({ error: 'Login failed' });
-    }
+    })(req, res, next);
 });
 
 // API Routes
@@ -352,28 +363,23 @@ app.post('/api/logout', (req, res) => {
 // Page Routes
 app.get('/', (req, res) => {
     if (req.session?.user?.id) {
-        console.log('🔄 Already logged in, redirecting to dashboard');
         return res.redirect('/dashboard');
     }
-    console.log('🏠 Serving login page');
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/dashboard', (req, res) => {
     if (!req.isAuthenticated()) {
-        console.log('❌ Not authenticated, redirecting to login');
         return res.redirect('/?error=not_logged_in');
     }
-    console.log('🔄 Redirecting to dashboard.html');
     res.redirect('/dashboard.html');
 });
 
 app.get('/dashboard.html', (req, res) => {
     if (!req.isAuthenticated()) {
-        console.log('❌ Not authenticated for dashboard.html');
         return res.redirect('/?error=not_logged_in');
     }
-    console.log('📋 Serving dashboard for:', req.session.user.username);
+    console.log('📋 Dashboard for:', req.session.user.username);
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
@@ -381,11 +387,12 @@ app.get('/dashboard.html', (req, res) => {
 app.get('/debug', (req, res) => {
     res.json({
         session: req.session,
+        user: req.user,
         authenticated: req.isAuthenticated(),
-        mongoState: mongoose.connection.readyState,
         config: {
             clientId: config.DISCORD_CLIENT_ID,
-            redirectUri: config.DISCORD_REDIRECT_URI
+            redirectUri: config.DISCORD_REDIRECT_URI,
+            mongoConnected: mongoose.connection.readyState === 1
         }
     });
 });
@@ -398,7 +405,6 @@ if (require.main === module) {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`🔗 URL: https://dash.blazenode.site`);
         console.log(`🔐 Discord OAuth: ${config.DISCORD_REDIRECT_URI}`);
-        console.log(`👤 Admin Login: dev_shadowz / shadowz`);
-        console.log(`🎮 Discord Login: Available`);
+        console.log(`👤 Admin: dev_shadowz / shadowz`);
     });
 }

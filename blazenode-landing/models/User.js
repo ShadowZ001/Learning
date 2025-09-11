@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
     },
     loginType: {
         type: String,
-        enum: ['username', 'discord'],
+        enum: ['username', 'discord', 'local'],
         required: true
     },
     coins: {

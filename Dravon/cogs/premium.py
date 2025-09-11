@@ -93,6 +93,12 @@ class Premium(commands.Cog):
                 inline=False
             )
             
+            embed.add_field(
+                name="🎵 Music Node Switching",
+                value="🎶 **Spotify Node** - High-quality streaming\n🎵 **Lavalink Nodes** - Multiple backup servers\n⚡ **Instant Switching** - Use `>node switch <name>`",
+                inline=False
+            )
+            
             embed.set_footer(text="Upgrade today for the best experience 🚀")
             
             # Add Get Premium button
@@ -166,7 +172,7 @@ class Premium(commands.Cog):
                 "🛠️ Early Access Features",
                 "🏆 Premium Badge"
             ]
-            perks_text = "\n".join(perks)
+            perks_text = "\n".join(perks) + "\n🎵 Node Switching Access"
         else:
             status = "❌ Not Premium"
             expiry_text = "N/A"
@@ -175,6 +181,14 @@ class Premium(commands.Cog):
         embed.add_field(name="Status", value=status, inline=True)
         embed.add_field(name="Expiry", value=expiry_text, inline=True)
         embed.add_field(name="Perks", value=perks_text, inline=False)
+        
+        if is_premium_active:
+            current_mode = await self.bot.db.get_premium_music_mode(user.id)
+            embed.add_field(
+                name="🎵 Music Settings",
+                value=f"**Current Mode:** {current_mode or 'lavalink'}\n**Node Access:** All nodes available",
+                inline=True
+            )
         
         embed.set_footer(text="Powered by Dravon™ Premium System")
         

@@ -132,8 +132,21 @@ class MusicPlayerView(discord.ui.View):
     
     @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger, custom_id="stop")
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.player.current:
+            await interaction.response.send_message("❌ Nothing is playing!", ephemeral=True)
+            return
+        
         await self.player.stop()
         self.player.queue.clear()
+        
+        # Clean up music message
+        music_cog = interaction.client.get_cog('Music')
+        if music_cog and interaction.guild.id in music_cog.music_messages:
+            try:
+                del music_cog.music_messages[interaction.guild.id]
+            except:
+                pass
+        
         await interaction.response.send_message("⏹️ Stopped playback and cleared queue!", ephemeral=True)
     
     @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.success, custom_id="pause_resume")
@@ -275,10 +288,8 @@ class Music(commands.Cog):
     def get_player(self, guild_id):
         """Get player with error handling for node failures"""
         try:
-            node = wavelink.Pool.get_node()
-            if node and hasattr(node, 'is_connected') and node.is_connected():
-                return node.get_player(guild_id)
-            return None
+            player = wavelink.Pool.get_player(guild_id)
+            return player
         except Exception:
             return None
     
@@ -414,7 +425,6 @@ class Music(commands.Cog):
         premium_cog = self.bot.get_cog('Premium')
         if premium_cog:
             is_premium = await premium_cog.is_premium(ctx.author.id)
-            music_mode = await premium_cog.get_music_mode(ctx.author.id)
             
             # Check if it's a Spotify URL/query and user isn't premium
             if ("spotify" in query.lower() or "open.spotify.com" in query) and not is_premium:
@@ -428,6 +438,11 @@ class Music(commands.Cog):
                 return
         
         player = self.get_player(ctx.guild.id)
+        
+        # If bot is in different channel, disconnect first
+        if player and player.channel and player.channel != ctx.author.voice.channel:
+            await player.disconnect()
+            player = None
         
         if not player:
             try:
@@ -522,10 +537,10 @@ class Music(commands.Cog):
         """Stop the music and clear the queue"""
         player = self.get_player(ctx.guild.id)
         
-        if not player:
+        if not player or not player.current:
             embed = discord.Embed(
                 title="❌ Error",
-                description="No music player found!",
+                description="Nothing is currently playing!",
                 color=0xff0000
             )
             embed = add_dravon_footer(embed)
@@ -534,6 +549,14 @@ class Music(commands.Cog):
         
         await player.stop()
         player.queue.clear()
+        
+        # Clean up music message
+        if ctx.guild.id in self.music_messages:
+            try:
+                await self.music_messages[ctx.guild.id].delete()
+                del self.music_messages[ctx.guild.id]
+            except:
+                pass
         
         embed = discord.Embed(
             title="⏹️ Stopped",
@@ -617,6 +640,92 @@ class Music(commands.Cog):
     async def on_wavelink_track_end(self, payload):
         """Handle track end events"""
         await self.update_music_embed(payload.player.guild.id)
+    
+    @commands.hybrid_command(name="node")
+    async def node_command(self, ctx, action: str = None, node_name: str = None):
+        """Node management for premium users and bot admins"""
+        premium_cog = self.bot.get_cog('Premium')
+        is_premium = premium_cog and await premium_cog.is_premium(ctx.author.id)
+        is_bot_admin = ctx.author.id == 1037768611126841405
+        
+        if not is_premium and not is_bot_admin:
+            embed = discord.Embed(
+                title="🔒 Premium Feature",
+                description="Node switching is only available for premium users and bot admins!",
+                color=0xff0000
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+            return
+        
+        if action is None or action.lower() == "list":
+            embed = discord.Embed(
+                title="🎵 Available Music Nodes",
+                description="**Available Lavalink Nodes:**\n\n🟢 **primary** - Main Lavalink server\n🟡 **backup1** - Backup server 1\n🟠 **backup2** - Backup server 2\n\n**Premium Spotify:**\n🎶 **spotify** - High-quality Spotify streaming\n\n**Usage:** `>node switch <node_name>`",
+                color=0x7289da
+            )
+            
+            current_node = wavelink.Pool.get_node()
+            if current_node:
+                embed.add_field(
+                    name="Current Active Node",
+                    value=f"**{current_node.identifier}**",
+                    inline=False
+                )
+            
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+        
+        elif action.lower() == "switch" and node_name:
+            if node_name.lower() == "spotify":
+                if not is_premium:
+                    embed = discord.Embed(
+                        title="🔒 Premium Required",
+                        description="Spotify node is only available for premium users!",
+                        color=0xff0000
+                    )
+                    embed = add_dravon_footer(embed)
+                    await ctx.send(embed=embed)
+                    return
+                
+                # Set user's music mode to Spotify
+                await self.bot.db.set_premium_music_mode(ctx.author.id, "spotify")
+                embed = discord.Embed(
+                    title="✅ Switched to Spotify",
+                    description="Your music mode has been set to **Spotify**!\nYou can now play high-quality Spotify tracks.",
+                    color=0x00ff00
+                )
+            else:
+                # Switch to Lavalink node
+                valid_nodes = ["primary", "backup1", "backup2"]
+                if node_name.lower() not in valid_nodes:
+                    embed = discord.Embed(
+                        title="❌ Invalid Node",
+                        description=f"Available nodes: {', '.join(valid_nodes)}, spotify",
+                        color=0xff0000
+                    )
+                    embed = add_dravon_footer(embed)
+                    await ctx.send(embed=embed)
+                    return
+                
+                # Set user's music mode to Lavalink
+                await self.bot.db.set_premium_music_mode(ctx.author.id, "lavalink")
+                embed = discord.Embed(
+                    title="✅ Switched to Lavalink",
+                    description=f"Your music mode has been set to **Lavalink** ({node_name.lower()})!\nYou can now play from YouTube and other sources.",
+                    color=0x00ff00
+                )
+            
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(
+                title="🎵 Node Commands",
+                description="**Available Commands:**\n\n`>node list` - View available nodes\n`>node switch <node_name>` - Switch to a specific node\n\n**Available Nodes:**\n• primary, backup1, backup2 (Lavalink)\n• spotify (Premium only)",
+                color=0x7289da
+            )
+            embed = add_dravon_footer(embed)
+            await ctx.send(embed=embed)
     
     @commands.command(name="mhelp")
     async def music_help(self, ctx):
