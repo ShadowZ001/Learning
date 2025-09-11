@@ -13,15 +13,59 @@ const app = express();
 
 console.log('🚀 Starting BlazeNode Dashboard Server...');
 
-// Simple MongoDB connection
-mongoose.connect(config.MONGODB_URI)
-    .then(() => console.log('✅ MongoDB connected'))
-    .catch(err => console.error('❌ MongoDB error:', err.message));
+// Global MongoDB connection state
+let isConnected = false;
 
-// Create admin user - SIMPLE
+// MongoDB connection with persistent connection
+async function ensureMongoConnection() {
+    if (isConnected && mongoose.connection.readyState === 1) {
+        return true;
+    }
+    
+    try {
+        if (mongoose.connection.readyState === 0) {
+            await mongoose.connect(config.MONGODB_URI, {
+                maxPoolSize: 10,
+                serverSelectionTimeoutMS: 5000,
+                socketTimeoutMS: 45000,
+                bufferCommands: false,
+                bufferMaxEntries: 0
+            });
+        }
+        
+        isConnected = true;
+        console.log('✅ MongoDB connected');
+        return true;
+    } catch (error) {
+        console.error('❌ MongoDB connection error:', error.message);
+        isConnected = false;
+        return false;
+    }
+}
+
+// Initial connection
+ensureMongoConnection();
+
+// Monitor connection
+mongoose.connection.on('connected', () => {
+    isConnected = true;
+    console.log('✅ MongoDB connected');
+});
+
+mongoose.connection.on('disconnected', () => {
+    isConnected = false;
+    console.log('⚠️ MongoDB disconnected');
+});
+
+mongoose.connection.on('error', (error) => {
+    isConnected = false;
+    console.error('❌ MongoDB error:', error.message);
+});
+
+// Create admin user - SIMPLIFIED
 async function createAdminUser() {
     try {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+        await ensureMongoConnection();
         
         const adminExists = await User.findOne({ username: 'dev_shadowz' });
         if (!adminExists) {
@@ -36,8 +80,6 @@ async function createAdminUser() {
             });
             await admin.save();
             console.log('✅ Admin user created: dev_shadowz / shadowz');
-        } else {
-            console.log('✅ Admin user exists');
         }
     } catch (error) {
         console.error('❌ Admin creation failed:', error.message);
@@ -76,7 +118,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Discord Strategy
+// Discord Strategy - SIMPLIFIED
 passport.use(new DiscordStrategy({
     clientID: config.DISCORD_CLIENT_ID,
     clientSecret: config.DISCORD_CLIENT_SECRET,
@@ -85,6 +127,8 @@ passport.use(new DiscordStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         console.log('🔐 Discord OAuth for:', profile.username);
+        
+        await ensureMongoConnection();
         
         let user = await User.findOne({ discordId: profile.id });
         
@@ -124,6 +168,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     try {
+        await ensureMongoConnection();
         const user = await User.findById(id);
         done(null, user);
     } catch (error) {
@@ -132,7 +177,7 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Initialize admin user
-createAdminUser();
+setTimeout(createAdminUser, 3000);
 
 // Auth Routes
 app.get('/auth/discord', (req, res, next) => {
@@ -179,17 +224,26 @@ app.get('/auth/callback', (req, res, next) => {
     })(req, res, next);
 });
 
-// Username/Password login - SIMPLIFIED
+// Username/Password login - FIXED DATABASE CONNECTION
 app.post('/auth/login', async (req, res) => {
     const { username, password } = req.body;
     
     console.log('🔐 Local login attempt:', username);
     
     try {
-        // Simple user lookup
+        // Always ensure connection before database operations
+        const connected = await ensureMongoConnection();
+        if (!connected) {
+            console.error('❌ Could not connect to database');
+            return res.status(500).json({ error: 'Database temporarily unavailable. Please try again.' });
+        }
+        
+        console.log('✅ Database connection confirmed');
+        
+        // Find user - simplified approach
         const user = await User.findOne({ username: username });
         
-        console.log('User lookup result:', {
+        console.log('User lookup:', {
             found: !!user,
             username: user?.username,
             hasPassword: !!user?.password,
@@ -201,7 +255,7 @@ app.post('/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
         
-        console.log('✅ Local login success:', username);
+        console.log('✅ Credentials valid for:', username);
         
         // Update last login
         user.lastLogin = new Date();
@@ -219,7 +273,7 @@ app.post('/auth/login', async (req, res) => {
             loginType: 'local'
         };
         
-        console.log('✅ Session created for local user:', username);
+        console.log('✅ Session created for:', username);
         
         res.json({ 
             success: true, 
@@ -228,7 +282,7 @@ app.post('/auth/login', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Local login error:', error);
+        console.error('❌ Login error:', error.message);
         res.status(500).json({ error: 'Login failed: ' + error.message });
     }
 });
@@ -246,6 +300,8 @@ app.post('/api/admin/create-user', async (req, res) => {
     }
     
     try {
+        await ensureMongoConnection();
+        
         const existingUser = await User.findOne({ username: username.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({ error: 'Username already exists' });
@@ -283,6 +339,7 @@ app.get('/api/user', async (req, res) => {
     }
     
     try {
+        await ensureMongoConnection();
         const user = await User.findById(req.session.user.id);
         if (!user) {
             return res.status(401).json({ error: 'User not found' });
@@ -306,6 +363,7 @@ app.get('/api/user', async (req, res) => {
 
 app.get('/api/leaderboard', async (req, res) => {
     try {
+        await ensureMongoConnection();
         const users = await User.find({})
             .sort({ coins: -1 })
             .limit(10)
@@ -328,6 +386,7 @@ app.post('/api/afk-earn', async (req, res) => {
     }
 
     try {
+        await ensureMongoConnection();
         const user = await User.findById(req.session.user.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -379,6 +438,20 @@ app.get('/dashboard.html', (req, res) => {
     }
     console.log('📋 Dashboard for:', req.session.user.username);
     res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+// Database status endpoint
+app.get('/db-status', (req, res) => {
+    res.json({
+        connected: isConnected,
+        readyState: mongoose.connection.readyState,
+        states: {
+            0: 'disconnected',
+            1: 'connected',
+            2: 'connecting',
+            3: 'disconnecting'
+        }
+    });
 });
 
 module.exports = app;
