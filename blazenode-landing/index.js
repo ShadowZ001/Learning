@@ -27,7 +27,7 @@ async function connectMongoDB() {
 
 connectMongoDB();
 
-// Create admin user
+// Create admin user - FIXED
 async function createAdminUser() {
     try {
         const adminExists = await User.findOne({ username: 'dev_shadowz' });
@@ -43,6 +43,8 @@ async function createAdminUser() {
             });
             await admin.save();
             console.log('✅ Admin user created: dev_shadowz / shadowz');
+        } else {
+            console.log('✅ Admin user already exists');
         }
     } catch (error) {
         console.error('❌ Admin creation failed:', error.message);
@@ -89,13 +91,15 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        console.log('🔐 Discord OAuth for:', profile.username);
+        console.log('🔐 Discord OAuth for:', profile.username, profile.id);
+        console.log('📧 Email:', profile.email);
         
         if (mongoose.connection.readyState !== 1) {
             await connectMongoDB();
         }
         
         if (mongoose.connection.readyState !== 1) {
+            console.error('❌ Database connection failed');
             return done(new Error('Database connection failed'), null);
         }
         
@@ -145,7 +149,7 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // Initialize admin user
-setTimeout(createAdminUser, 3000);
+setTimeout(createAdminUser, 2000);
 
 // Auth Routes
 app.get('/auth/discord', (req, res, next) => {
@@ -159,18 +163,18 @@ app.get('/auth/callback', (req, res, next) => {
     passport.authenticate('discord', (err, user, info) => {
         if (err) {
             console.error('❌ Discord auth error:', err.message);
-            return res.redirect('/?error=discord_failed');
+            return res.redirect('/?error=discord_failed&message=' + encodeURIComponent('Discord authentication failed'));
         }
         
         if (!user) {
             console.error('❌ No user from Discord');
-            return res.redirect('/?error=no_user');
+            return res.redirect('/?error=no_user&message=' + encodeURIComponent('No user data received'));
         }
         
         req.logIn(user, (loginErr) => {
             if (loginErr) {
                 console.error('❌ Login error:', loginErr);
-                return res.redirect('/?error=login_failed');
+                return res.redirect('/?error=login_failed&message=' + encodeURIComponent('Login process failed'));
             }
             
             // Create session
@@ -199,9 +203,20 @@ app.post('/auth/login', async (req, res) => {
     console.log('🔐 Local login attempt:', username);
     
     try {
+        // Find user by username (case insensitive)
         const user = await User.findOne({ 
-            username: username.toLowerCase()
+            username: { $regex: new RegExp(`^${username}$`, 'i') }
         });
+        
+        console.log('User found:', user ? 'Yes' : 'No');
+        if (user) {
+            console.log('User details:', {
+                username: user.username,
+                hasPassword: !!user.password,
+                loginType: user.loginType,
+                isAdmin: user.isAdmin
+            });
+        }
         
         if (!user || user.password !== password) {
             console.log('❌ Invalid credentials for:', username);
