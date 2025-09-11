@@ -267,6 +267,53 @@ app.post('/auth/login', async (req, res) => {
     }
 });
 
+// Admin user creation endpoint - only dev_shadowz can create users
+app.post('/api/admin/create-user', async (req, res) => {
+    // Check if user is admin
+    if (!req.session?.user?.username || req.session.user.username !== 'dev_shadowz') {
+        return res.status(403).json({ error: 'Access denied - Admin only' });
+    }
+    
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password required' });
+    }
+    
+    try {
+        // Check if user already exists
+        const existingUser = await User.findOne({ username: username.toLowerCase() });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+        
+        // Create new user
+        const newUser = new User({
+            username: username.toLowerCase(),
+            password: password,
+            email: `${username.toLowerCase()}@blazenode.local`,
+            loginType: 'local',
+            coins: 1000,
+            isAdmin: false,
+            serverCount: 0,
+            createdAt: new Date()
+        });
+        
+        await newUser.save();
+        console.log('✅ New user created by admin:', username);
+        
+        res.json({ 
+            success: true, 
+            message: `User '${username}' created successfully`,
+            username: username
+        });
+        
+    } catch (error) {
+        console.error('❌ User creation error:', error);
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
 // API Routes
 app.get('/api/user', async (req, res) => {
     if (!req.session?.user?.id) {
