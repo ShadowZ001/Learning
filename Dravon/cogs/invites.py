@@ -1,135 +1,244 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+from utils.embed_utils import add_dravon_footer
+
+class InviteSetupView(discord.ui.View):
+    def __init__(self, bot, guild):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild = guild
+    
+    @discord.ui.select(cls=discord.ui.ChannelSelect, placeholder="Select the channel for invite messages...", channel_types=[discord.ChannelType.text])
+    async def channel_select(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+        channel = select.values[0]
+        
+        # Save to database
+        await self.bot.db.set_invite_logs_channel(self.guild.id, channel.id)
+        
+        embed = discord.Embed(
+            title="✅ Invite Setup Complete",
+            description=f"Invite join messages will now be sent to {channel.mention}",
+            color=0x00ff00
+        )
+        embed = add_dravon_footer(embed)
+        
+        await interaction.response.edit_message(embed=embed, view=None)
 
 class Invites(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.invite_cache = {}
+        self.invite_cache = {}  # Cache invites for tracking
+    
+    async def cog_load(self):
+        """Cache all guild invites on startup"""
+        for guild in self.bot.guilds:
+            try:
+                invites = await guild.invites()
+                self.invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
+            except:
+                self.invite_cache[guild.id] = {}
+    
+    @commands.hybrid_command(name="inviteinfo")
+    async def invite_info(self, ctx):
+        """Show invite system information"""
+        embed = discord.Embed(
+            title="🎟️ Invite System",
+            description="**Track server invites and see who's bringing new members!**\n\n**Available Commands:**\n• `/invitesetup` - Configure invite logging\n• `/invites <user>` - Check user's invite stats\n• `/inviteboard` - View invite leaderboard",
+            color=0x7289da
+        )
+        await ctx.send(embed=embed)
+    
+    @commands.hybrid_command(name="invitesetup")
+    @commands.has_permissions(manage_guild=True)
+    async def invite_setup(self, ctx):
+        """Set up where invite join messages will be sent"""
+        embed = discord.Embed(
+            title="🎟️ Invite Setup",
+            description="Select the channel where invite join messages should be sent.",
+            color=0x7289da
+        )
+        embed = add_dravon_footer(embed)
+        
+        view = InviteSetupView(self.bot, ctx.guild)
+        await ctx.send(embed=embed, view=view)
     
     @commands.hybrid_command(name="invites")
-    @app_commands.describe(user="The user to check invites for")
-    async def invites(self, ctx, user: discord.Member = None):
+    async def invites_command(self, ctx, user: discord.Member = None):
+        """Check how many invites a specific user has"""
         if user is None:
             user = ctx.author
         
-        try:
-            invites = await ctx.guild.invites()
-            user_invites = [invite for invite in invites if invite.inviter == user]
-            total_uses = sum(invite.uses for invite in user_invites)
-        except discord.Forbidden:
-            await ctx.send("I don't have permission to view invites in this server.")
-            return
+        # Get user invite data from database
+        invite_data = await self.bot.db.get_user_invites(ctx.guild.id, user.id)
+        
+        if not invite_data:
+            invite_data = {"total": 0, "joins": 0, "leaves": 0, "bonus": 0}
         
         embed = discord.Embed(
-            title=f"📊 Invite Statistics",
-            description=f"➡️ **{user.display_name}** has **{total_uses}** invites\n\n" +
-                       f"**📈 Joins:** {total_uses}\n" +
-                       f"**📉 Left:** 0\n" +
-                       f"**🚫 Fake:** 0\n" +
-                       f"**🔄 Rejoins:** 0\n\n" +
-                       f"➡️ **Need Support** - support",
-            color=0x00ff00
+            title=f"**{user.display_name}**",
+            color=user.color if hasattr(user, 'color') else 0x7289da
         )
         
-        embed.set_thumbnail(url=user.display_avatar.url)
-        embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
+        embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
+        
+        embed.add_field(
+            name="✨ Invites",
+            value=str(invite_data.get("total", 0)),
+            inline=True
+        )
+        
+        embed.add_field(
+            name="👥 Joins",
+            value=str(invite_data.get("joins", 0)),
+            inline=True
+        )
+        
+        embed.add_field(
+            name="❌ Leaves",
+            value=str(invite_data.get("leaves", 0)),
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🎁 Bonus",
+            value=str(invite_data.get("bonus", 0)),
+            inline=True
+        )
+        
+        embed.set_footer(text="Track your invites and climb the leaderboard!")
+        
+        await ctx.send(embed=embed)
+    
+    @commands.hybrid_command(name="inviteboard")
+    async def invite_board(self, ctx):
+        """Shows a leaderboard of top inviters in the server"""
+        # Get all invite data for the guild
+        all_invites = await self.bot.db.get_guild_invites(ctx.guild.id)
+        
+        if not all_invites or len(all_invites) == 0:
+            embed = discord.Embed(
+                title="📊 Invite Leaderboard",
+                description="No invite data found for this server. Start inviting members to see the leaderboard!",
+                color=0x7289da
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Sort users by total invites
+        sorted_users = sorted(all_invites.items(), key=lambda x: x[1].get("total", 0), reverse=True)
+        
+        # Create leaderboard description
+        leaderboard_text = ""
+        medals = ["🥇", "🥈", "🥉"]
+        
+        for i, (user_id, data) in enumerate(sorted_users[:10]):
+            user = ctx.guild.get_member(int(user_id))
+            if user:
+                medal = medals[i] if i < 3 else f"{i+1}."
+                invites = data.get("total", 0)
+                leaderboard_text += f"{medal} {user.display_name} — {invites}\n"
+        
+        if not leaderboard_text:
+            leaderboard_text = "No active inviters found."
+        
+        embed = discord.Embed(
+            title=f"📊 {ctx.guild.name} Invite Leaderboard",
+            description=leaderboard_text,
+            color=0x7289da
+        )
+        
+        # Add user's personal stats
+        user_data = all_invites.get(str(ctx.author.id), {"total": 0})
+        user_rank = next((i+1 for i, (uid, _) in enumerate(sorted_users) if uid == str(ctx.author.id)), "Unranked")
+        user_invites = user_data.get("total", 0)
+        total_inviters = len(sorted_users)
+        total_invites = sum(data.get("total", 0) for data in all_invites.values())
+        
+        embed.add_field(
+            name="📈 Your Stats",
+            value=f"**Your Rank:** {user_rank}\n**Your Invites:** {user_invites}\n**Total Inviters:** {total_inviters}\n**Total Invites in Server:** {total_invites}",
+            inline=False
+        )
         
         await ctx.send(embed=embed)
     
     @commands.hybrid_group(name="invite")
     async def invite_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send("Use `invite tracking channel set <channel>` or `invite test` commands.")
+            embed = discord.Embed(
+                title="🎟️ Invite Management",
+                description="**Manage server invites**\n\n**Commands:**\n• `/invites <user>` - Check invite stats\n• `/invite add <user> <amount>` - Add bonus invites\n• `/invite remove <user> <amount>` - Remove invites\n• `/invite clear <user>` - Reset user invites\n• `/invite resetall` - Reset all invites",
+                color=0x7289da
+            )
+            await ctx.send(embed=embed)
     
-    @invite_group.group(name="tracking")
-    async def tracking_group(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send("Use `invite tracking channel set <channel>` to setup invite tracking.")
+    @invite_group.command(name="add")
+    @commands.has_permissions(manage_guild=True)
+    async def invites_add(self, ctx, user: discord.Member, amount: int):
+        """Give bonus invites to a user"""
+        if amount <= 0:
+            await ctx.send("❌ Amount must be positive!", ephemeral=True)
+            return
+        
+        await self.bot.db.add_user_bonus_invites(ctx.guild.id, user.id, amount)
+        await ctx.send(f"✅ Added {amount} bonus invites to {user.mention}!", ephemeral=True)
     
-    @tracking_group.command(name="channel")
-    @app_commands.describe(action="Use 'set' to configure", channel="The channel to send invite tracking messages")
-    async def tracking_channel(self, ctx, action: str, channel: discord.TextChannel = None):
-        if action.lower() != "set":
-            await ctx.send("Use `invite tracking channel set <channel>` to setup invite tracking.")
+    @invite_group.command(name="remove")
+    @commands.has_permissions(manage_guild=True)
+    async def invites_remove(self, ctx, user: discord.Member, amount: int):
+        """Remove invites from a user"""
+        if amount <= 0:
+            await ctx.send("❌ Amount must be positive!", ephemeral=True)
             return
         
-        if not channel:
-            await ctx.send("Please specify a channel: `invite tracking channel set <channel>`")
-            return
-        
-        if not ctx.author.guild_permissions.manage_guild:
-            await ctx.send("You need 'Manage Server' permission to use this command.")
-            return
-        
-        # Save tracking channel to database
-        config = {"tracking_channel": channel.id}
-        await self.bot.db.set_invite_config(ctx.guild.id, config)
-        
-        # Cache current invites
-        try:
-            invites = await ctx.guild.invites()
-            self.invite_cache[ctx.guild.id] = {invite.code: invite.uses for invite in invites}
-        except discord.Forbidden:
-            pass
-        
-        await ctx.send(f"✅ Invite tracking has been set to {channel.mention}")
+        await self.bot.db.remove_user_invites(ctx.guild.id, user.id, amount)
+        await ctx.send(f"✅ Removed {amount} invites from {user.mention}!", ephemeral=True)
+    
+    @invite_group.command(name="clear")
+    @commands.has_permissions(manage_guild=True)
+    async def invites_clear(self, ctx, user: discord.Member):
+        """Reset a user's invites to 0"""
+        await self.bot.db.clear_user_invites(ctx.guild.id, user.id)
+        await ctx.send(f"✅ Cleared all invites for {user.mention}!", ephemeral=True)
+    
+    @invite_group.command(name="resetall")
+    @commands.has_permissions(administrator=True)
+    async def invites_resetall(self, ctx):
+        """Reset the entire server's invites"""
+        await self.bot.db.clear_guild_invites(ctx.guild.id)
+        await ctx.send("✅ Reset all invites for this server!", ephemeral=True)
     
     @invite_group.command(name="test")
-    async def test_tracking(self, ctx):
-        if not ctx.author.guild_permissions.manage_guild:
-            await ctx.send("You need 'Manage Server' permission to use this command.")
+    @commands.has_permissions(manage_guild=True)
+    async def invite_test(self, ctx):
+        """Test invite tracking system"""
+        logs_channel_id = await self.bot.db.get_invite_logs_channel(ctx.guild.id)
+        if not logs_channel_id:
+            await ctx.send("❌ No invite logs channel configured! Use `/invitesetup` first.", ephemeral=True)
             return
         
-        # Get tracking config
-        config = await self.bot.db.get_invite_config(ctx.guild.id)
-        if not config or not config.get("tracking_channel"):
-            await ctx.send("❌ Invite tracking is not set up. Use `invite tracking channel set <channel>` first.")
-            return
-        
-        tracking_channel = self.bot.get_channel(config["tracking_channel"])
-        if not tracking_channel:
-            await ctx.send("❌ Tracking channel not found. Please reconfigure invite tracking.")
+        logs_channel = ctx.guild.get_channel(logs_channel_id)
+        if not logs_channel:
+            await ctx.send("❌ Invite logs channel not found!", ephemeral=True)
             return
         
         # Send test message
-        test_message = f"📥 **{ctx.author.display_name}** joined using **Test User**'s invite (`TEST123`) - This is a test message"
-        await tracking_channel.send(test_message)
-        await ctx.send(f"✅ Test message sent to {tracking_channel.mention}")
-    
-    @invite_group.command(name="config")
-    async def tracking_config(self, ctx):
-        config = await self.bot.db.get_invite_config(ctx.guild.id)
-        
-        if not config or not config.get("tracking_channel"):
-            embed = discord.Embed(
-                title="📋 Invite Tracking Configuration",
-                description="Invite tracking is not configured for this server.",
-                color=0x7289da
-            )
-        else:
-            tracking_channel = self.bot.get_channel(config["tracking_channel"])
-            channel_mention = tracking_channel.mention if tracking_channel else "Channel not found"
-            
-            embed = discord.Embed(
-                title="📋 Invite Tracking Configuration",
-                description=f"**Status:** ✅ Active\n**Tracking Channel:** {channel_mention}\n**Features:** Member joins, Vanity URL detection",
-                color=0x00ff00
-            )
-        
-        await ctx.send(embed=embed)
+        test_message = f"✛ {ctx.author.mention} joined the server invited by @TestUser now has (5)\n✛ {ctx.guild.name} now has {ctx.guild.member_count} members"
+        await logs_channel.send(test_message)
+        await ctx.send(f"✅ Test message sent to {logs_channel.mention}!", ephemeral=True)
     
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        """Track when someone joins via invite"""
         guild = member.guild
         
-        # Get tracking config
-        config = await self.bot.db.get_invite_config(guild.id)
-        if not config or not config.get("tracking_channel"):
+        # Get invite logs channel
+        logs_channel_id = await self.bot.db.get_invite_logs_channel(guild.id)
+        if not logs_channel_id:
             return
         
-        tracking_channel = self.bot.get_channel(config["tracking_channel"])
-        if not tracking_channel:
+        logs_channel = guild.get_channel(logs_channel_id)
+        if not logs_channel:
             return
         
         try:
@@ -137,42 +246,75 @@ class Invites(commands.Cog):
             current_invites = await guild.invites()
             current_invite_dict = {invite.code: invite.uses for invite in current_invites}
             
-            # Compare with cached invites
+            # Compare with cached invites to find which was used
             cached_invites = self.invite_cache.get(guild.id, {})
-            
+            used_invite = None
             inviter = None
-            invite_code = None
             
-            # Find which invite was used
             for code, uses in current_invite_dict.items():
                 if code in cached_invites and uses > cached_invites[code]:
-                    # Find the invite object
-                    for invite in current_invites:
-                        if invite.code == code:
-                            inviter = invite.inviter
-                            invite_code = code
-                            break
+                    # This invite was used
+                    used_invite = next((inv for inv in current_invites if inv.code == code), None)
+                    if used_invite:
+                        inviter = used_invite.inviter
                     break
             
             # Update cache
             self.invite_cache[guild.id] = current_invite_dict
             
-            # Send tracking message
             if inviter:
-                message = f"📥 **{member.display_name}** joined using **{inviter.display_name}**'s invite (`{invite_code}`)"
+                # Update inviter's stats in database
+                await self.bot.db.add_user_invites(guild.id, inviter.id, 1)
+                
+                # Get updated invite count
+                invite_data = await self.bot.db.get_user_invites(guild.id, inviter.id)
+                total_invites = invite_data.get("total", 1) if invite_data else 1
+                
+                # Send join message
+                message = f"✛ {member.mention} joined the server invited by {inviter.mention} now has ({total_invites})\n✛ {guild.name} now has {guild.member_count} members"
+                await logs_channel.send(message)
             else:
-                # Check for vanity URL
-                if guild.vanity_url_code:
-                    message = f"📥 **{member.display_name}** joined using **Vanity URL** (`{guild.vanity_url_code}`)"
-                else:
-                    message = f"📥 **{member.display_name}** joined but I couldn't determine the invite used"
-            
-            await tracking_channel.send(message)
-            
-        except discord.Forbidden:
+                # Unknown invite source
+                message = f"✛ {member.display_name} joined the server\n✛ {guild.name} now has {guild.member_count} members"
+                await logs_channel.send(message)
+                
+        except Exception as e:
+            print(f"Error tracking invite: {e}")
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        """Track when someone leaves (reduce inviter's count)"""
+        guild = member.guild
+        
+        try:
+            # Find who invited this member (this would require storing join data)
+            # For now, we'll just update the cache
+            invites = await guild.invites()
+            self.invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
+        except:
             pass
-
-
+    
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        """Cache invites when bot joins a guild"""
+        try:
+            invites = await guild.invites()
+            self.invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
+        except:
+            self.invite_cache[guild.id] = {}
+    
+    @commands.Cog.listener()
+    async def on_invite_create(self, invite):
+        """Update cache when new invite is created"""
+        if invite.guild.id not in self.invite_cache:
+            self.invite_cache[invite.guild.id] = {}
+        self.invite_cache[invite.guild.id][invite.code] = invite.uses
+    
+    @commands.Cog.listener()
+    async def on_invite_delete(self, invite):
+        """Update cache when invite is deleted"""
+        if invite.guild.id in self.invite_cache:
+            self.invite_cache[invite.guild.id].pop(invite.code, None)
 
 async def setup(bot):
     await bot.add_cog(Invites(bot))

@@ -156,8 +156,16 @@ class UserInfo(commands.Cog):
             color=0x000000
         )
         
-        # Set user avatar as thumbnail
+        # Set user avatar as thumbnail and try to get banner
         embed.set_thumbnail(url=user.display_avatar.url)
+        
+        # Try to fetch user banner
+        try:
+            fetched_user = await self.bot.fetch_user(user.id)
+            if fetched_user.banner:
+                embed.set_image(url=fetched_user.banner.url)
+        except:
+            pass
         
         # General Information
         general_info = f"**Name:** {user.name}\n"

@@ -1,155 +1,204 @@
-# 🤖 Dravon Bot
+# 🤖 Dravon Bot - Advanced Discord Server Management
 
-**Your all-in-one Discord server management solution**
+[![Discord](https://img.shields.io/discord/1413789539350118020?color=7289da&logo=discord&logoColor=white)](https://discord.gg/UKR78VcEtg)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Dravon is a comprehensive Discord bot featuring advanced moderation, security, music, premium perks, and much more!
+**Dravon** is a comprehensive Discord bot designed for advanced server management with premium features, security systems, and entertainment modules.
 
 ## ✨ Features
 
-### 🛡️ **Moderation System**
-- Ban, kick, mute, warn users
-- Advanced purge system
-- Comprehensive user management
+### 🛡️ **Security & Moderation**
+- **AntiNuke v6.0** - Advanced server protection system
+- **AutoMod** - Automatic content filtering and moderation
+- **Comprehensive Moderation** - Ban, kick, mute, warn with DM notifications
+- **Whitelist System** - Trusted user management
 
-### 🔒 **Security (AntiNuke v6.0)**
-- Advanced server protection
-- Whitelist system
-- Real-time threat detection
+### 🎵 **Music System**
+- **Multi-Platform Support** - YouTube, Spotify (Premium), SoundCloud
+- **24/7 Mode** - Keep bot in voice channel (Premium feature)
+- **Interactive Player** - Button controls and queue management
+- **Voice Channel Status** - Shows currently playing song in VC
+- **Smart Node Management** - Automatic failover to backup Lavalink servers
 
-### 🎫 **Ticket System**
-- Complete ticket management
-- Category-based tickets
-- Interactive controls
+### 🎫 **Server Management**
+- **Ticket System** - Professional support ticket management
+- **Welcome/Leave Messages** - Customizable member greetings
+- **AutoRole** - Automatic role assignment for new members
+- **Invite Tracking** - Track who invites new members
+- **Giveaway System** - Falcon-style giveaway management
 
-### 🎉 **Giveaway System**
-- Falcon-style giveaways
-- Advanced management
-- Multiple winner support
+### 💎 **Premium Features**
+- **No-Prefix Commands** - Natural command usage for premium users
+- **Spotify Integration** - High-quality music streaming
+- **24/7 Music Mode** - Never-ending voice presence
+- **Priority Support** - Faster response times
+- **Advanced Analytics** - Detailed server insights
 
-### 🎵 **Music Player**
-- Multi-platform support (YouTube, Spotify, SoundCloud)
-- Interactive player controls
-- Premium Spotify integration
+### 🎮 **Entertainment**
+- **Fun Commands** - Kiss, slap, hug with anime GIFs
+- **Interactive Games** - Various entertainment modules
+- **Custom Embeds** - Beautiful embed creation system
 
-### 💎 **Premium System**
-- No-prefix commands
-- Exclusive Spotify access
-- Priority support
-- Premium badges
-
-### 🆙 **Level Up System**
-- XP tracking and leveling
-- Customizable level-up messages
-- Leaderboards with pagination
-
-### 🎨 **Embed Builder**
-- Custom embed creation
-- Variable support
-- Easy management
+### 📊 **Information & Utilities**
+- **Server Analytics** - Detailed server information
+- **User Profiles** - Comprehensive user information with banners
+- **Bot Statistics** - Real-time bot performance metrics
+- **Ping Command** - Bot, API, and Lavalink latency
 
 ## 🚀 Quick Start
 
-1. **Clone the repository:**
+### Prerequisites
+- Python 3.11 or higher
+- MongoDB database
+- Discord Bot Token
+- Lavalink server (optional, for music features)
+
+### Installation
+
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/Dravon.git
-   cd Dravon
+   git clone https://github.com/yourusername/dravon-bot.git
+   cd dravon-bot
    ```
 
-2. **Install dependencies:**
+2. **Install dependencies**
    ```bash
-   pip install discord.py wavelink motor
+   pip install -r requirements.txt
    ```
 
-3. **Configure environment:**
+3. **Configure the bot**
+   ```bash
+   cp config_template.py config.py
+   # Edit config.py with your settings
+   ```
+
+4. **Set up environment variables**
    ```bash
    cp .env.example .env
-   # Edit .env with your tokens and credentials
+   # Edit .env with your tokens and database URI
    ```
 
-4. **Run the bot:**
+5. **Run the bot**
    ```bash
-   python main.py
+   python start_dravon.py
    ```
 
-## ⚙️ Configuration
+## 🔧 Configuration
 
+### Environment Variables
 Create a `.env` file with the following variables:
 
 ```env
-DISCORD_TOKEN=your_bot_token_here
+# Discord Configuration
+DISCORD_TOKEN=your_discord_bot_token
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_CLIENT_SECRET=your_client_secret
 
-# Lavalink Configuration
-LAVALINK_HOST=your_lavalink_host
+# Database Configuration
+MONGODB_URI=your_mongodb_connection_string
+
+# Lavalink Configuration (Optional)
+LAVALINK_HOST=localhost
 LAVALINK_PORT=2333
-LAVALINK_PASSWORD=your_lavalink_password
-LAVALINK_SECURE=false
+LAVALINK_PASSWORD=youshallnotpass
 
-# Spotify Configuration (Premium Feature)
-SPOTIFY_CLIENT_ID=your_spotify_client_id
-SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+# Admin Configuration
+BOT_ADMIN_ID=your_user_id
 ```
+
+### Bot Permissions
+The bot requires the following permissions:
+- Administrator (recommended) or specific permissions:
+  - Manage Server
+  - Manage Roles
+  - Manage Channels
+  - Manage Messages
+  - Connect & Speak (for music)
+  - Use Voice Activity
+  - Send Messages
+  - Embed Links
+  - Attach Files
 
 ## 📋 Commands
 
-### General Commands
-- `>help` - Show all commands
-- `>serverinfo` - Server information
-- `>userinfo <user>` - User information
-- `>botinfo` - Bot statistics
+### Basic Commands
+- `/help` - Show all available commands
+- `/serverinfo` - Display server information
+- `/userinfo` - Show user information
+- `/ping` - Check bot latency
 
-### Music Commands
-- `>play <song>` - Play music
-- `>skip` - Skip current track
-- `>queue` - View queue
-- `>volume <1-100>` - Adjust volume
+### Moderation
+- `/kick <user> [reason]` - Kick a member
+- `/ban <user> [reason]` - Ban a member
+- `/mute <user> <time> [reason]` - Mute a member
+- `/purge <amount>` - Delete messages
 
-### Premium Commands
-- `>premium` - View premium perks
-- `>premium mode <spotify/lavalink>` - Toggle music mode (Premium only)
+### Music
+- `/play <song>` - Play music
+- `/skip` - Skip current track
+- `/stop` - Stop music and clear queue
+- `/247 enable/disable` - Toggle 24/7 mode (Premium)
 
 ### Setup Commands
-- `>ticket setup` - Configure tickets
-- `>welcome setup` - Configure welcome messages
-- `>levelup setup` - Configure level system
+- `/antinuke setup` - Configure security system
+- `/automod setup` - Setup automatic moderation
+- `/welcome setup` - Configure welcome messages
+- `/ticket setup` - Setup ticket system
 
-## 🏆 Premium Features
+## 🏗️ Deployment
 
-Premium users enjoy:
-- **No prefix needed** for any command
-- **Spotify music streaming** with high quality
-- **24/7 voice support**
-- **Priority support**
-- **Premium badges**
+### Pterodactyl Panel
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions on Pterodactyl panels.
 
-## 🤝 Team
+### Docker
+```bash
+docker build -t dravon-bot .
+docker run -d --name dravon-bot -e DISCORD_TOKEN="your_token" dravon-bot
+```
 
-- 👑 **Founder/Owner** - Visionary leader and project founder
-- 🤝 **Co-Owner** - Project management and organization
-- 💻 **Developer** - Core development and maintenance
-- 🌐 **Community Manager** - User engagement and support
+### VPS/Dedicated Server
+```bash
+# Clone and setup
+git clone https://github.com/yourusername/dravon-bot.git
+cd dravon-bot
+chmod +x start.sh
+./start.sh
+```
 
-## 🔗 Links
+## 🤝 Contributing
 
-- **Support Server:** [Join Here](https://discord.gg/UKR78VcEtg)
-- **Invite Bot:** [Add to Server](https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot)
-- **Partnership:** [BlazeNode Hosting](https://discord.gg/NCDpChD6US)
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🛠️ Contributing
+## 🆘 Support
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- **Discord Server**: [Join our support server](https://discord.gg/UKR78VcEtg)
+- **Documentation**: Check the `/docs` command in Discord
+- **Issues**: Report bugs on GitHub Issues
 
-## 📞 Support
+## 🙏 Acknowledgments
 
-Need help? Join our [Discord Server](https://discord.gg/UKR78VcEtg) for support!
+- Discord.py community for the excellent library
+- Lavalink developers for the music functionality
+- All contributors and users who help improve Dravon
+
+## 📊 Statistics
+
+- **Servers**: 1000+ Discord servers
+- **Users**: 100,000+ users served
+- **Commands**: 100+ available commands
+- **Uptime**: 99.9% average uptime
 
 ---
 
-**Powered by Dravon™** - *Strong Team. Strong Community.*
+**Made with ❤️ by the Dravon Team**
+
+[Invite Dravon](https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot) | [Support Server](https://discord.gg/UKR78VcEtg) | [Partnership](https://discord.gg/GwXUfVjnTm)

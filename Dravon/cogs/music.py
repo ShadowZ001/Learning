@@ -117,27 +117,50 @@ class MusicHelpView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=view)
 
 class MusicPlayerView(discord.ui.View):
-    def __init__(self, player):
+    def __init__(self, player, requester_id):
         super().__init__(timeout=None)
         self.player = player
+        self.requester_id = requester_id
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Only allow the requester to use buttons"""
+        if interaction.user.id != self.requester_id:
+            await interaction.response.send_message("❌ Only the person who played this song can control the player!", ephemeral=True)
+            return False
+        return True
     
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary, custom_id="skip")
     async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not self.player.current:
-            await interaction.response.send_message("Nothing is playing!", ephemeral=True)
+        if not self.player or not self.player.current:
+            await interaction.response.send_message("❌ Nothing is currently playing!", ephemeral=True)
             return
         
+        current_track = self.player.current.title
         await self.player.skip()
-        await interaction.response.send_message("⏭️ Skipped to next track!", ephemeral=True)
+        await interaction.response.send_message(f"⏭️ Skipped **{current_track}**!", ephemeral=True)
     
     @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger, custom_id="stop")
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not self.player.current:
-            await interaction.response.send_message("❌ Nothing is playing!", ephemeral=True)
+        # Check if player exists and has music
+        has_music = False
+        if self.player:
+            if hasattr(self.player, 'current') and self.player.current:
+                has_music = True
+            elif hasattr(self.player, 'queue') and self.player.queue:
+                has_music = True
+        
+        if not has_music:
+            await interaction.response.send_message("❌ Nothing is currently playing or queued!", ephemeral=True)
             return
         
-        await self.player.stop()
-        self.player.queue.clear()
+        # Stop the player
+        try:
+            if hasattr(self.player, 'stop'):
+                await self.player.stop()
+            if hasattr(self.player, 'queue'):
+                self.player.queue.clear()
+        except Exception:
+            pass
         
         # Clean up music message
         music_cog = interaction.client.get_cog('Music')
@@ -193,11 +216,11 @@ class Music(commands.Cog):
         # Start with primary node only
         await self.connect_primary_node()
         
-        # Start node monitoring task
+        # Start node monitoring task (reduced frequency)
         self.bot.loop.create_task(self.monitor_nodes())
     
     async def connect_primary_node(self):
-        """Connect to primary node first"""
+        """Connect to primary node only"""
         primary_node = wavelink.Node(
             uri=f"http://{os.getenv('LAVALINK_HOST', 'localhost')}:{os.getenv('LAVALINK_PORT', '2333')}",
             password=os.getenv('LAVALINK_PASSWORD', 'youshallnotpass'),
@@ -209,11 +232,11 @@ class Music(commands.Cog):
             self.active_nodes = ["primary"]
             print("✅ Connected to primary Lavalink node")
         except Exception as e:
-            print(f"❌ Primary node failed, connecting to backup: {e}")
-            await self.connect_backup_node()
+            print(f"❌ Primary node failed: {e}")
+            print("⚠️ Music features will be limited without Lavalink")
     
     async def connect_backup_node(self):
-        """Connect to next available backup node"""
+        """Connect to backup node only when primary fails"""
         backup_nodes = [
             wavelink.Node(
                 uri=f"https://{os.getenv('LAVALINK_HOST2', 'lavalink.oops.wtf')}:{os.getenv('LAVALINK_PORT2', '443')}",
@@ -228,26 +251,29 @@ class Music(commands.Cog):
         ]
         
         for node in backup_nodes:
-            if node.identifier not in self.active_nodes:
-                try:
-                    await wavelink.Pool.connect(client=self.bot, nodes=[node])
-                    self.active_nodes.append(node.identifier)
-                    print(f"✅ Connected to backup node: {node.identifier}")
-                    return
-                except Exception as e:
-                    print(f"❌ Failed to connect to {node.identifier}: {e}")
+            try:
+                await wavelink.Pool.connect(client=self.bot, nodes=[node])
+                self.active_nodes = [node.identifier]
+                print(f"✅ Connected to backup node: {node.identifier}")
+                return
+            except Exception as e:
+                print(f"❌ Failed to connect to {node.identifier}: {e}")
         
-        print("❌ No Lavalink nodes available")
+        print("❌ No Lavalink nodes available - music features disabled")
     
     async def monitor_nodes(self):
-        """Monitor node health and manage connections"""
+        """Monitor node health - only use backups if primary fails"""
         while not self.bot.is_closed():
-            await asyncio.sleep(30)  # Check every 30 seconds
+            await asyncio.sleep(60)  # Check every 60 seconds to reduce latency
             
             try:
-                # Check if primary is available and we're not using it
-                if "primary" not in self.active_nodes:
+                # Only check if we need to switch back to primary from backup
+                current_node = wavelink.Pool.get_node()
+                
+                # If we're on backup and primary is available, switch back
+                if current_node and current_node.identifier != "primary" and "primary" not in self.active_nodes:
                     try:
+                        # Test primary connectivity
                         primary_node = wavelink.Node(
                             uri=f"http://{os.getenv('LAVALINK_HOST')}:{os.getenv('LAVALINK_PORT')}",
                             password=os.getenv('LAVALINK_PASSWORD'),
@@ -255,41 +281,41 @@ class Music(commands.Cog):
                         )
                         await wavelink.Pool.connect(client=self.bot, nodes=[primary_node])
                         
-                        # Disconnect backup nodes when primary is back
-                        for node_id in self.active_nodes.copy():
-                            if node_id != "primary":
-                                try:
-                                    node = wavelink.Pool.get_node(node_id)
-                                    if node:
-                                        await node.disconnect()
-                                        self.active_nodes.remove(node_id)
-                                        print(f"🔄 Disconnected backup node: {node_id}")
-                                except:
-                                    pass
+                        # If successful, disconnect backup
+                        try:
+                            await current_node.disconnect()
+                            if current_node.identifier in self.active_nodes:
+                                self.active_nodes.remove(current_node.identifier)
+                        except:
+                            pass
                         
                         self.active_nodes = ["primary"]
                         print("🔄 Switched back to primary node")
                     except:
+                        # Primary still not available, stay on backup
                         pass
                 
-                # Check if current nodes are still working
-                try:
-                    current_node = wavelink.Pool.get_node()
-                    if not current_node or not hasattr(current_node, 'is_connected') or not current_node.is_connected():
-                        print("🔄 Current node disconnected, finding backup...")
-                        await self.connect_backup_node()
-                except Exception as node_error:
-                    print(f"🔄 Node check failed: {node_error}, finding backup...")
+                # Only check node health if there are issues
+                elif not current_node or (hasattr(current_node, 'is_connected') and not current_node.is_connected()):
+                    print("🔄 Node disconnected, connecting to backup...")
                     await self.connect_backup_node()
                     
             except Exception as e:
                 print(f"❌ Node monitoring error: {e}")
     
     def get_player(self, guild_id):
-        """Get player with error handling for node failures"""
+        """Get player with proper error handling"""
         try:
-            player = wavelink.Pool.get_player(guild_id)
-            return player
+            # Check guild voice client first
+            guild = self.bot.get_guild(guild_id)
+            if guild and guild.voice_client:
+                return guild.voice_client
+            
+            # Try wavelink pool as backup
+            try:
+                return wavelink.Pool.get_player(guild_id)
+            except:
+                return None
         except Exception:
             return None
     
@@ -400,13 +426,15 @@ class Music(commands.Cog):
             return
         
         embed = self.create_music_embed(player)
-        view = MusicPlayerView(player)
-        
-        try:
-            message = self.music_messages[guild_id]
-            await message.edit(embed=embed, view=view)
-        except:
-            pass
+        # Keep the original requester for button permissions
+        if guild_id in self.music_messages:
+            try:
+                message = self.music_messages[guild_id]
+                # Get original view's requester_id if possible
+                view = MusicPlayerView(player, getattr(message.components[0].children[0], 'requester_id', 0) if message.components else 0)
+                await message.edit(embed=embed, view=view)
+            except:
+                pass
     
     @commands.hybrid_command(name="play")
     async def play(self, ctx, *, query: str):
@@ -439,22 +467,47 @@ class Music(commands.Cog):
         
         player = self.get_player(ctx.guild.id)
         
-        # If bot is in different channel, disconnect first
-        if player and player.channel and player.channel != ctx.author.voice.channel:
-            await player.disconnect()
-            player = None
-        
-        if not player:
+        # Smart voice connection handling
+        if player:
+            # Player exists, check if it's properly connected
+            if hasattr(player, 'connected') and not player.connected:
+                # Player exists but not connected, reconnect
+                try:
+                    await player.disconnect(force=True)
+                    await asyncio.sleep(0.3)
+                    player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+                except Exception as e:
+                    await ctx.send(f"❌ Failed to reconnect: {str(e)}", delete_after=5)
+                    return
+            elif player.channel and player.channel.id != ctx.author.voice.channel.id:
+                # Player in different channel, move it
+                try:
+                    await player.move_to(ctx.author.voice.channel)
+                except Exception:
+                    # Move failed, disconnect and reconnect
+                    try:
+                        await player.disconnect(force=True)
+                        await asyncio.sleep(0.3)
+                        player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+                    except Exception as e:
+                        await ctx.send(f"❌ Failed to switch channels: {str(e)}", delete_after=5)
+                        return
+            # If player is in same channel and connected, use it as is
+        else:
+            # No player exists, create new connection
             try:
                 player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+            except discord.ClientException:
+                # Bot already connected, get the existing connection
+                player = ctx.guild.voice_client
+                if player and player.channel.id != ctx.author.voice.channel.id:
+                    try:
+                        await player.move_to(ctx.author.voice.channel)
+                    except Exception as e:
+                        await ctx.send(f"❌ Failed to move to your channel: {str(e)}", delete_after=5)
+                        return
             except Exception as e:
-                embed = discord.Embed(
-                    title="❌ Connection Error",
-                    description=f"Failed to connect to voice channel: {str(e)}",
-                    color=0xff0000
-                )
-                embed = add_dravon_footer(embed)
-                await ctx.send(embed=embed)
+                await ctx.send(f"❌ Connection failed: {str(e)}", delete_after=5)
                 return
         
         # Search for tracks based on premium mode
@@ -504,37 +557,13 @@ class Music(commands.Cog):
         else:
             await player.play(track)
             embed = self.create_music_embed(player)
-            view = MusicPlayerView(player)
+            view = MusicPlayerView(player, ctx.author.id)
             message = await ctx.send(embed=embed, view=view)
             self.music_messages[ctx.guild.id] = message
     
     @commands.hybrid_command(name="skip")
     async def skip(self, ctx):
         """Skip the current song"""
-        player = self.get_player(ctx.guild.id)
-        
-        if not player or not player.current:
-            embed = discord.Embed(
-                title="❌ Error",
-                description="Nothing is playing!",
-                color=0xff0000
-            )
-            embed = add_dravon_footer(embed)
-            await ctx.send(embed=embed)
-            return
-        
-        await player.skip()
-        embed = discord.Embed(
-            title="⏭️ Skipped",
-            description="Skipped to the next track!",
-            color=0x00ff00
-        )
-        embed = add_dravon_footer(embed)
-        await ctx.send(embed=embed)
-    
-    @commands.hybrid_command(name="stop")
-    async def stop(self, ctx):
-        """Stop the music and clear the queue"""
         player = self.get_player(ctx.guild.id)
         
         if not player or not player.current:
@@ -547,8 +576,41 @@ class Music(commands.Cog):
             await ctx.send(embed=embed)
             return
         
-        await player.stop()
-        player.queue.clear()
+        current_track = player.current.title
+        await player.skip()
+        
+        embed = discord.Embed(
+            title="⏭️ Skipped",
+            description=f"Skipped **{current_track}**!",
+            color=0x00ff00
+        )
+        embed = add_dravon_footer(embed)
+        await ctx.send(embed=embed)
+    
+    @commands.hybrid_command(name="stop")
+    async def stop(self, ctx):
+        """Stop the music and clear the queue"""
+        player = self.get_player(ctx.guild.id)
+        
+        if not player:
+            await ctx.send("❌ No music player found!", delete_after=5)
+            return
+        
+        # Force stop everything
+        try:
+            # Stop current track
+            await player.stop(force=True)
+            
+            # Clear queue
+            if hasattr(player, 'queue'):
+                player.queue.clear()
+            
+            # Reset player state
+            if hasattr(player, '_current'):
+                player._current = None
+                
+        except Exception as e:
+            print(f"Error stopping player: {e}")
         
         # Clean up music message
         if ctx.guild.id in self.music_messages:
@@ -558,13 +620,98 @@ class Music(commands.Cog):
             except:
                 pass
         
-        embed = discord.Embed(
-            title="⏹️ Stopped",
-            description="Stopped playback and cleared the queue!",
-            color=0x00ff00
-        )
-        embed = add_dravon_footer(embed)
-        await ctx.send(embed=embed)
+        await ctx.send("⏹️ Stopped playback and cleared the queue!", delete_after=5)
+    
+    @commands.hybrid_command(name="disconnect")
+    async def disconnect(self, ctx):
+        """Disconnect the bot from voice channel"""
+        player = self.get_player(ctx.guild.id)
+        
+        if not player:
+            await ctx.send("❌ Bot is not connected to any voice channel!", delete_after=5)
+            return
+        
+        # Check if 24/7 mode is enabled
+        is_247_enabled = await self.bot.db.get_247_mode(ctx.guild.id)
+        if is_247_enabled:
+            await ctx.send("❌ Cannot disconnect while 24/7 mode is enabled! Use `/247 disable` first.", delete_after=5)
+            return
+        
+        # Stop music and disconnect
+        try:
+            # Clear voice channel status
+            if player.channel:
+                try:
+                    await player.channel.edit(status=None)
+                except:
+                    pass
+            
+            if hasattr(player, 'stop'):
+                await player.stop(force=True)
+            if hasattr(player, 'queue'):
+                player.queue.clear()
+            await player.disconnect(force=True)
+        except Exception as e:
+            print(f"Error disconnecting: {e}")
+        
+        # Clean up music message
+        if ctx.guild.id in self.music_messages:
+            try:
+                await self.music_messages[ctx.guild.id].delete()
+                del self.music_messages[ctx.guild.id]
+            except:
+                pass
+        
+        await ctx.send("🔌 Disconnected from voice channel!", delete_after=5)
+    
+    @commands.hybrid_command(name="247")
+    async def twentyfourseven(self, ctx, action: str = None):
+        """24/7 mode - Keep bot in voice channel (Premium only)"""
+        premium_cog = self.bot.get_cog('Premium')
+        if not premium_cog or not await premium_cog.is_premium(ctx.author.id):
+            embed = discord.Embed(
+                title="🔒 Premium Feature",
+                description="24/7 mode is only available for premium users!\n\nUpgrade to premium to enjoy:\n🎵 24/7 music streaming\n🔊 Never-ending voice presence\n✨ And much more!",
+                color=0xffd700
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        if not action:
+            # Show current status
+            is_enabled = await self.bot.db.get_247_mode(ctx.guild.id)
+            status = "Enabled" if is_enabled else "Disabled"
+            embed = discord.Embed(
+                title="🎵 24/7 Mode Status",
+                description=f"**Current Status:** {status}\n\n**Commands:**\n• `/247 enable` - Enable 24/7 mode\n• `/247 disable` - Disable 24/7 mode",
+                color=0x00ff00 if is_enabled else 0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        if action.lower() == "enable":
+            if not ctx.author.voice:
+                await ctx.send("❌ You need to be in a voice channel to enable 24/7 mode!", delete_after=5)
+                return
+            
+            # Connect bot if not connected
+            player = self.get_player(ctx.guild.id)
+            if not player:
+                try:
+                    player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+                except Exception as e:
+                    await ctx.send(f"❌ Failed to connect: {str(e)}", delete_after=5)
+                    return
+            
+            await self.bot.db.set_247_mode(ctx.guild.id, True)
+            await ctx.send("✅ 24/7 mode enabled! Bot will stay in voice channel.", delete_after=5)
+        
+        elif action.lower() == "disable":
+            await self.bot.db.set_247_mode(ctx.guild.id, False)
+            await ctx.send("✅ 24/7 mode disabled! Bot can now be disconnected.", delete_after=5)
+        
+        else:
+            await ctx.send("❌ Invalid action! Use `enable` or `disable`.", delete_after=5)
     
     @commands.hybrid_command(name="queue")
     async def queue(self, ctx):
@@ -639,7 +786,44 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload):
         """Handle track end events"""
-        await self.update_music_embed(payload.player.guild.id)
+        player = payload.player
+        guild = player.guild
+        
+        # Update music embed
+        await self.update_music_embed(guild.id)
+        
+        # If queue is empty and no autoplay, handle end
+        if not player.queue and not player.autoplay:
+            # Update voice channel status
+            if player.channel:
+                try:
+                    await player.channel.edit(status="🟢 The queue has ended. Thanks for listening!")
+                except:
+                    pass
+            
+            # Check if 24/7 mode is disabled, then disconnect after 10 minutes
+            is_247_enabled = await self.bot.db.get_247_mode(guild.id)
+            if not is_247_enabled:
+                try:
+                    await asyncio.sleep(600)  # Wait 10 minutes before disconnecting
+                    if not player.current and not player.queue:  # Double check
+                        # Clear voice channel status
+                        if player.channel:
+                            try:
+                                await player.channel.edit(status=None)
+                            except:
+                                pass
+                        
+                        await player.disconnect()
+                        # Clean up music message
+                        if guild.id in self.music_messages:
+                            try:
+                                await self.music_messages[guild.id].delete()
+                                del self.music_messages[guild.id]
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"Error in auto-disconnect: {e}")
     
     @commands.hybrid_command(name="node")
     async def node_command(self, ctx, action: str = None, node_name: str = None):
@@ -747,7 +931,22 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload):
         """Handle track start events"""
-        await self.update_music_embed(payload.player.guild.id)
+        player = payload.player
+        track = payload.track
+        
+        # Update music embed
+        await self.update_music_embed(player.guild.id)
+        
+        # Update voice channel status with song name
+        if player.channel:
+            try:
+                status_text = f"🎵 {track.title} is playing!!"
+                # Limit status text to 500 characters (Discord limit)
+                if len(status_text) > 500:
+                    status_text = status_text[:497] + "..."
+                await player.channel.edit(status=status_text)
+            except Exception as e:
+                print(f"Failed to update voice channel status: {e}")
 
 async def setup(bot):
     await bot.add_cog(Music(bot))

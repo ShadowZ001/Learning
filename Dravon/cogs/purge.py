@@ -26,14 +26,7 @@ class Purge(commands.Cog):
             
             deleted = await ctx.channel.purge(limit=amount*2, check=check)  # Check more messages to find enough user messages
             
-            embed = discord.Embed(
-                title="🗑️ User Messages Purged",
-                description=f"Deleted **{len(deleted)}** user messages",
-                color=0xff0000
-            )
-            
-            embed.set_footer(text=f"Purged by {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
-            await ctx.send(embed=embed, delete_after=5)
+            await ctx.send(f"🗑️ Deleted **{len(deleted)}** user messages. Purged by {ctx.author.display_name}", delete_after=5)
             
         except discord.Forbidden:
             await ctx.send("I don't have permission to delete messages in this channel.")
@@ -58,14 +51,7 @@ class Purge(commands.Cog):
             
             deleted = await ctx.channel.purge(limit=amount*2, check=check)  # Check more messages to find enough bot messages
             
-            embed = discord.Embed(
-                title="🤖 Bot Messages Purged",
-                description=f"Deleted **{len(deleted)}** bot messages",
-                color=0xff0000
-            )
-            
-            embed.set_footer(text=f"Purged by {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
-            await ctx.send(embed=embed, delete_after=5)
+            await ctx.send(f"🤖 Deleted **{len(deleted)}** bot messages. Purged by {ctx.author.display_name}", delete_after=5)
             
         except discord.Forbidden:
             await ctx.send("I don't have permission to delete messages in this channel.")

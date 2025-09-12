@@ -392,7 +392,6 @@ class AutoMod(commands.Cog):
                 inline=True
             )
             
-            embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413172497964339200/e8ce1391-d56f-493b-827c-e4193504d635.jpg?ex=68baf6f2&is=68b9a572&hm=84ef8272435663ce53d9817be2781ed63bdde5bbb09735f08b0f8eff2aee027d&")
             embed.set_footer(text="AutoMod System • Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
             
             view = MainSetupView()

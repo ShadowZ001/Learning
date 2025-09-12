@@ -34,12 +34,12 @@ class BotAdmin(commands.Cog):
     def is_bot_admin(self, user_id):
         return user_id in self.bot_admins
     
-    # Remove cog_check to allow commands to be visible
+    async def cog_check(self, ctx):
+        """Only allow bot admins to use these commands"""
+        return self.is_bot_admin(ctx.author.id)
     
     @commands.command(name='global', hidden=True)
     async def global_announce(self, ctx, *, message=None):
-        if not self.is_bot_admin(ctx.author.id):
-            return
         
         if not message:
             await ctx.send("Please provide a message to announce globally.")
@@ -65,8 +65,6 @@ class BotAdmin(commands.Cog):
     
     @commands.group(name='announce', hidden=True, invoke_without_command=True)
     async def announce(self, ctx):
-        if not self.is_bot_admin(ctx.author.id):
-            return
         await ctx.send("Use: `announce title <title>`, `announce description <desc>`, `announce color <hex>`, `announce image <url>`, `announce send`")
     
     @announce.command(name='title')
@@ -132,8 +130,6 @@ class BotAdmin(commands.Cog):
     
     @commands.group(name='premiumlogs', hidden=True, invoke_without_command=True)
     async def premiumlogs_group(self, ctx):
-        if not self.is_bot_admin(ctx.author.id):
-            return
         await ctx.send("Use: `premiumlogs set <channel>`")
     
     @premiumlogs_group.command(name='set')
@@ -144,8 +140,6 @@ class BotAdmin(commands.Cog):
     
     @commands.group(name='blacklist', hidden=True, invoke_without_command=True)
     async def blacklist(self, ctx):
-        if not self.is_bot_admin(ctx.author.id):
-            return
         await ctx.send("Use: `blacklist user <user_id>`")
     
     @blacklist.command(name='user')
@@ -156,8 +150,6 @@ class BotAdmin(commands.Cog):
     
     @commands.group(name='botadmin', hidden=True, invoke_without_command=True)
     async def botadmin_group(self, ctx):
-        if not self.is_bot_admin(ctx.author.id):
-            return
         await ctx.send("Use: `botadmin add <user_id>`")
     
     @botadmin_group.command(name='add')

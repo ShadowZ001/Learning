@@ -537,3 +537,71 @@ class Database:
         
         data = await self.db.antinuke_whitelist.find_one({"guild_id": guild_id})
         return user_id in data.get("users", []) if data else False
+    
+    async def set_invite_logs_channel(self, guild_id: int, channel_id: int):
+        """Set invite logs channel"""
+        await self.db.invite_logs.update_one(
+            {"guild_id": guild_id},
+            {"$set": {"channel_id": channel_id}},
+            upsert=True
+        )
+    
+    async def get_invite_logs_channel(self, guild_id: int) -> Optional[int]:
+        """Get invite logs channel"""
+        result = await self.db.invite_logs.find_one({"guild_id": guild_id})
+        return result.get("channel_id") if result else None
+    
+    async def add_user_invites(self, guild_id: int, user_id: int, count: int):
+        """Add invites to a user"""
+        await self.db.user_invites.update_one(
+            {"guild_id": guild_id, "user_id": user_id},
+            {"$inc": {"total": count, "joins": count}},
+            upsert=True
+        )
+    
+    async def get_user_invites(self, guild_id: int, user_id: int):
+        """Get user invite data"""
+        result = await self.db.user_invites.find_one({"guild_id": guild_id, "user_id": user_id})
+        return result if result else None
+    
+    async def get_guild_invites(self, guild_id: int):
+        """Get all invite data for a guild"""
+        results = await self.db.user_invites.find({"guild_id": guild_id}).to_list(None)
+        return {str(result["user_id"]): result for result in results}
+    
+    async def add_user_bonus_invites(self, guild_id: int, user_id: int, amount: int):
+        """Add bonus invites to a user"""
+        await self.db.user_invites.update_one(
+            {"guild_id": guild_id, "user_id": user_id},
+            {"$inc": {"total": amount, "bonus": amount}},
+            upsert=True
+        )
+    
+    async def remove_user_invites(self, guild_id: int, user_id: int, amount: int):
+        """Remove invites from a user"""
+        await self.db.user_invites.update_one(
+            {"guild_id": guild_id, "user_id": user_id},
+            {"$inc": {"total": -amount}},
+            upsert=True
+        )
+    
+    async def clear_user_invites(self, guild_id: int, user_id: int):
+        """Clear all invites for a user"""
+        await self.db.user_invites.delete_one({"guild_id": guild_id, "user_id": user_id})
+    
+    async def clear_guild_invites(self, guild_id: int):
+        """Clear all invites for a guild"""
+        await self.db.user_invites.delete_many({"guild_id": guild_id})
+    
+    async def set_247_mode(self, guild_id: int, enabled: bool):
+        """Set 24/7 mode for a guild"""
+        await self.db.music_247.update_one(
+            {"guild_id": guild_id},
+            {"$set": {"enabled": enabled}},
+            upsert=True
+        )
+    
+    async def get_247_mode(self, guild_id: int) -> bool:
+        """Get 24/7 mode status for a guild"""
+        result = await self.db.music_247.find_one({"guild_id": guild_id})
+        return result.get("enabled", False) if result else False

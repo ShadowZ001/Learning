@@ -68,6 +68,11 @@ class DravonBot(commands.Bot):
         await self.load_extension('cogs.interactions')
         await self.load_extension('cogs.admin')
         await self.load_extension('cogs.whitelist_system')
+        await self.load_extension('cogs.uptime')
+        await self.load_extension('cogs.users')
+        await self.load_extension('cogs.invites')
+        await self.load_extension('cogs.basic_moderation')
+        await self.load_extension('cogs.ping')
         # await self.load_extension('cogs.premiumhelp')  # Comment out if doesn't exist
 
         try:
@@ -110,7 +115,8 @@ class DravonBot(commands.Bot):
     async def rotate_status(self):
         statuses = [
             "shadow >3",
-            f"currently {len(self.guilds)} servers"
+            f"currently {len(self.guilds)} servers",
+            "Try >help"
         ]
         
         while not self.is_closed():
@@ -131,14 +137,107 @@ class DravonBot(commands.Bot):
         if botadmin_cog and botadmin_cog.is_blacklisted(message.author.id):
             return
         
-        # Enhanced no-prefix system for premium users and guilds (case-insensitive)
+        # Command suggestion for wrong commands (only with prefix)
+        if message.guild and message.content.startswith('>'):
+            ctx = await self.get_context(message)
+            if ctx.command is None and len(message.content) > 1:
+                # Extract the attempted command
+                attempted_command = message.content[1:].split()[0].lower()
+                
+                # Enhanced command suggestions
+                suggestions = {
+                    'help': ['help', 'h', 'commands'],
+                    'serverinfo': ['serverinfo', 'si', 'server', 'guild'],
+                    'userinfo': ['userinfo', 'ui', 'user', 'profile'],
+                    'botinfo': ['botinfo', 'bi', 'bot', 'info'],
+                    'play': ['play', 'p', 'music', 'song'],
+                    'premium': ['premium', 'prem', 'vip'],
+                    'antinuke': ['antinuke', 'anti', 'security', 'protection'],
+                    'automod': ['automod', 'auto', 'mod', 'moderation'],
+                    'invites': ['invites', 'invite', 'inv', 'i'],
+                    'ping': ['ping', 'latency', 'pong'],
+                    'kick': ['kick', 'remove'],
+                    'ban': ['ban', 'banish'],
+                    'mute': ['mute', 'timeout', 'silence'],
+                    '247': ['247', '24/7', 'stay', 'alwayson']
+                }
+                
+                # Find closest match
+                found_suggestion = False
+                for cmd, aliases in suggestions.items():
+                    if attempted_command in aliases or any(attempted_command.startswith(alias) for alias in aliases):
+                        await message.channel.send(f"❓ Did you mean `>{cmd}`?", delete_after=5)
+                        found_suggestion = True
+                        break
+                
+                # Generic suggestion for completely unknown commands
+                if not found_suggestion and len(attempted_command) > 2:
+                    await message.channel.send(f"❓ Unknown command. Try `>help` for available commands.", delete_after=5)
+        
+        # Bot mention response
+        if message.guild and (f'<@{self.user.id}>' in message.content or f'<@!{self.user.id}>' in message.content):
+            prefix = await self.get_prefix(message)
+            
+            embed = discord.Embed(
+                title=f"🤖 {self.user.name}",
+                description=f"⚙️ **My prefix is** `{prefix}`\n\n❓ **Use** `{prefix}help` **to see all my commands!**",
+                color=0x7289da
+            )
+            
+            embed.set_footer(text=f"Requested by {message.author.display_name}", icon_url=message.author.display_avatar.url)
+            embed.set_author(name=f"{self.user.name}", icon_url=self.user.display_avatar.url)
+            
+            # Create buttons
+            view = discord.ui.View(timeout=300)
+            
+            support_btn = discord.ui.Button(
+                label="Support",
+                style=discord.ButtonStyle.link,
+                url="https://discord.gg/UKR78VcEtg"
+            )
+            
+            invite_btn = discord.ui.Button(
+                label="Invite Me",
+                style=discord.ButtonStyle.link,
+                url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot"
+            )
+            
+            delete_btn = discord.ui.Button(
+                emoji="🗑️",
+                style=discord.ButtonStyle.danger,
+                custom_id="delete_message"
+            )
+            
+            async def delete_callback(interaction):
+                if interaction.user.id == message.author.id:
+                    await interaction.message.delete()
+                else:
+                    await interaction.response.send_message("Only the command author can delete this message.", ephemeral=True)
+            
+            delete_btn.callback = delete_callback
+            
+            view.add_item(support_btn)
+            view.add_item(invite_btn)
+            view.add_item(delete_btn)
+            
+            await message.channel.send(embed=embed, view=view)
+            return
+        
+        # ULTRA STRICT no-prefix system EXCLUSIVELY for premium users and guilds
         if message.guild and not message.content.startswith(('>', '/', '<@', '!', '?', '.', '-', '+', '=')):
             premium_cog = self.get_cog('Premium')
-            if premium_cog:
-                user_premium = await premium_cog.is_premium(message.author.id)
-                guild_premium = await premium_cog.is_premium_guild(message.guild.id)
-                
-                if user_premium or guild_premium:
+            if not premium_cog:
+                return  # No premium cog, no no-prefix
+            
+            user_premium = await premium_cog.is_premium(message.author.id)
+            guild_premium = await premium_cog.is_premium_guild(message.guild.id)
+            
+            # ULTRA STRICT: Absolutely NO no-prefix for non-premium users
+            if not user_premium and not guild_premium:
+                return  # Immediately exit for non-premium users
+            
+            # Double check premium status
+            if user_premium or guild_premium:
                     content_stripped = message.content.strip()
                     words = content_stripped.split()
                     
@@ -173,7 +272,7 @@ class DravonBot(commands.Bot):
                             # Static command list for reliability (case-insensitive)
                             static_commands = {
                                 'help', 'mhelp', 'h', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
-                                'ping', 'support', 'partnership', 'docs', 'invite', 'stats',
+                                'ping', 'support', 'partnership', 'docs', 'invite', 'invites', 'i', 'stats',
                                 'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue', 'q', 'volume',
                                 'shuffle', 'clear', 'nowplaying', 'np', 'loop', 'autoplay', 'music',
                                 'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge',
@@ -185,7 +284,8 @@ class DravonBot(commands.Bot):
                                 'kiss', 'slap', 'kill', 'hug', 'pat', 'poke', 'fun',
                                 'afk', 'level', 'rank', 'leaderboard', 'levelup',
                                 'whitelist', 'blacklist', 'config', 'reset', 'enable', 'disable',
-                                'admin', 'announce', 'add', 'remove', 'list', 'show', 'view'
+                                'admin', 'announce', 'add', 'remove', 'list', 'show', 'view',
+                                'uptime', 'users', 'disconnect', 'tempmute'
                             }
                             
                             all_commands.update(static_commands)
@@ -227,7 +327,8 @@ class DravonBot(commands.Bot):
                                         'userinfo': first_word in ['userinfo', 'ui', 'Userinfo', 'USERINFO', 'UserInfo'],
                                         'antinuke': first_word in ['antinuke', 'anti', 'Antinuke', 'ANTINUKE', 'AntiNuke'],
                                         'automod': first_word in ['automod', 'auto', 'Automod', 'AUTOMOD', 'AutoMod'],
-                                        'premium': first_word in ['premium', 'prem', 'Premium', 'PREMIUM']
+                                        'premium': first_word in ['premium', 'prem', 'Premium', 'PREMIUM'],
+                                        'invites': first_word in ['invites', 'invite', 'i', 'Invites', 'INVITES', 'Invite', 'I']
                                     }
                                     
                                     for base_cmd, matches in command_variations.items():
@@ -237,6 +338,13 @@ class DravonBot(commands.Bot):
                                             break
                             
                             if command_found:
+                                # FINAL PREMIUM CHECK before allowing no-prefix
+                                final_user_premium = await premium_cog.is_premium(message.author.id)
+                                final_guild_premium = await premium_cog.is_premium_guild(message.guild.id)
+                                
+                                if not (final_user_premium or final_guild_premium):
+                                    return  # Block non-premium users completely
+                                
                                 prefix = await self.get_prefix(message)
                                 # Use the matched command to ensure proper case
                                 if matched_command and ' ' in matched_command:
@@ -429,20 +537,20 @@ class DravonBot(commands.Bot):
         if len(self._processed_commands) > 100:
             self._processed_commands = set(list(self._processed_commands)[-50:])
         
-        # Apply cooldowns based on premium status
+        # Apply cooldowns - ONLY premium users get no cooldowns
         premium_cog = self.get_cog('Premium')
         if premium_cog and message.guild:
             user_premium = await premium_cog.is_premium(message.author.id)
             guild_premium = await premium_cog.is_premium_guild(message.guild.id)
             
-            # No cooldown for premium users/guilds, 2 second cooldown for normal users
+            # ONLY premium users/guilds get no cooldowns
             if not (user_premium or guild_premium):
                 user_key = f"{message.author.id}_{ctx.command.name}"
                 current_time = time.time()
                 
                 if user_key in self.cooldowns:
                     time_diff = current_time - self.cooldowns[user_key]
-                    if time_diff < 2.0:  # 2 second cooldown
+                    if time_diff < 2.0:  # 2 second cooldown for non-premium
                         remaining = 2.0 - time_diff
                         embed = discord.Embed(
                             title="⏰ Command Cooldown",
@@ -450,7 +558,7 @@ class DravonBot(commands.Bot):
                             color=0xff8c00
                         )
                         embed.set_footer(text="Premium users enjoy instant command access!", icon_url=self.user.display_avatar.url)
-                        await ctx.send(embed=embed, delete_after=4)
+                        await ctx.send(f"⏰ Please wait **{remaining:.1f}s** before using this command again. 💎 Upgrade to Premium for no cooldowns!", delete_after=3)
                         return
                 
                 self.cooldowns[user_key] = current_time

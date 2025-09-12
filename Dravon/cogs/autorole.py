@@ -130,16 +130,60 @@ class AutoRole(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.hybrid_command(name="autorole")
-    async def autorole(self, ctx):
-        if not ctx.author.guild_permissions.manage_roles:
-            await ctx.send("You need 'Manage Roles' permission to use this command.")
-            return
+    @commands.hybrid_group(name="autorole")
+    async def autorole_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            if not ctx.author.guild_permissions.manage_roles:
+                await ctx.send("You need 'Manage Roles' permission to use this command.")
+                return
+            
+            view = AutoRoleSetupView(self.bot)
+            embed = view.create_setup_embed()
+            
+            await ctx.send(embed=embed, view=view)
+    
+    @autorole_group.command(name="config")
+    async def autorole_config(self, ctx):
+        """View autorole configuration"""
+        config = await self.bot.db.get_autorole_config(ctx.guild.id)
         
-        view = AutoRoleSetupView(self.bot)
-        embed = view.create_setup_embed()
+        embed = discord.Embed(
+            title=f"Autorole of - {ctx.guild.name}",
+            color=0x7289da
+        )
         
-        await ctx.send(embed=embed, view=view)
+        # Humans section
+        human_roles = []
+        if config and config.get('member_role'):
+            role = ctx.guild.get_role(config['member_role'])
+            if role:
+                human_roles.append(role.mention)
+        if config and config.get('extra_roles'):
+            for role_id in config['extra_roles']:
+                role = ctx.guild.get_role(role_id)
+                if role:
+                    human_roles.append(role.mention)
+        
+        embed.add_field(
+            name="__Humans__",
+            value="\n".join(human_roles) if human_roles else "No roles set",
+            inline=False
+        )
+        
+        # Bots section
+        bot_roles = []
+        if config and config.get('bot_role'):
+            role = ctx.guild.get_role(config['bot_role'])
+            if role:
+                bot_roles.append(role.mention)
+        
+        embed.add_field(
+            name="__Bots__",
+            value="\n".join(bot_roles) if bot_roles else "No roles set",
+            inline=False
+        )
+        
+        await ctx.send(embed=embed)
     
     @commands.Cog.listener()
     async def on_member_join(self, member):

@@ -20,7 +20,9 @@ class HelpView(discord.ui.View):
             discord.SelectOption(label="🎨 Embed Builder", description="Custom embed creation", value="embeds"),
             discord.SelectOption(label="🎵 Music Player", description="Play music from YouTube, Spotify", value="music"),
             discord.SelectOption(label="🎮 Fun Commands", description="Kiss, slap, kill and other fun interactions", value="fun"),
-            discord.SelectOption(label="🔧 Utility", description="Prefix, purge, and other utilities", value="utility")
+            discord.SelectOption(label="🔧 Utility", description="Prefix, purge, and other utilities", value="utility"),
+            discord.SelectOption(label="🎟️ Invites", description="Invite tracking and management", value="invites"),
+            discord.SelectOption(label="👊 Basic Moderation", description="Kick, ban, mute commands", value="basic_mod")
         ]
     )
     async def help_select(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -130,7 +132,7 @@ class HelpView(discord.ui.View):
             )
             embed.add_field(
                 name="Commands",
-                value="`>play <song/url>` - Play music or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music and clear queue\n`>queue` - View current queue\n`>volume <1-100>` - Adjust volume\n`>mhelp` - Detailed music help\n\n**Features:** Interactive player, autoplay, shuffle, multi-platform support",
+                value="`>play <song/url>` - Play music or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music and clear queue\n`>disconnect` - Disconnect from voice\n`>247 enable/disable` - 24/7 mode (Premium)\n`>queue` - View current queue\n`>volume <1-100>` - Adjust volume\n`>mhelp` - Detailed music help\n\n**Features:** Interactive player, autoplay, shuffle, 24/7 mode",
                 inline=False
             )
         
@@ -154,7 +156,31 @@ class HelpView(discord.ui.View):
             )
             embed.add_field(
                 name="Commands",
-                value="`>prefix set <prefix>` - Change bot prefix\n`>prefix reset` - Reset to default prefix\n`>purge <amount>` - Delete messages\n`>invite` - Get bot invite link\n`>avatar <user>` - Get user avatar",
+                value="`>prefix set <prefix>` - Change bot prefix\n`>prefix reset` - Reset to default prefix\n`>purge <amount>` - Delete messages\n`>ping` - Bot latency and status\n`>uptime` - Bot uptime\n`>users` - Global bot stats\n`>invite` - Get bot invite link",
+                inline=False
+            )
+        
+        elif category == "invites":
+            embed = discord.Embed(
+                title="🎟️ Invite Tracking Commands",
+                description="Track and manage server invites",
+                color=0xf39c12
+            )
+            embed.add_field(
+                name="Commands",
+                value="`/invitesetup` - Configure invite logging\n`/invites <user>` - Check user invite stats\n`/inviteboard` - View invite leaderboard\n`/invites add <user> <amount>` - Add bonus invites\n`/invites remove <user> <amount>` - Remove invites\n`/invites clear <user>` - Reset user invites\n`/invites resetall` - Reset all server invites",
+                inline=False
+            )
+        
+        elif category == "basic_mod":
+            embed = discord.Embed(
+                title="👊 Basic Moderation Commands",
+                description="Essential moderation commands with DM notifications",
+                color=0xe74c3c
+            )
+            embed.add_field(
+                name="Commands",
+                value="`/kick <user> [reason]` - Kick a member\n`/ban <user> [reason]` - Ban a member\n`/mute <user> <time> [reason]` - Mute a member\n`/tempmute <user> <time> [reason]` - Temporarily mute\n\n**Time Format:** 1h, 30m, 2d (hours, minutes, days)\n**Features:** Automatic DM notifications to users",
                 inline=False
             )
         
