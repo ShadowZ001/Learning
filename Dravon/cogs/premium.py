@@ -317,8 +317,9 @@ class Premium(commands.Cog):
         embed = discord.Embed(
             title="🌟 Premium Guild Activated!",
             description=f"✅ **{ctx.guild.name}** has been successfully activated as one of your premium guilds!\n\n🔹 **Linked by:** {ctx.author.mention}\n🔐 **Tier:** `Premium` | 🧩 **Linked Servers:** `{linked_count + 1}/50`\n\n✨ **What's Next?**\n• Access exclusive Dravon Premium features\n• Enhanced moderation, security, and support tools\n• Faster bot responses, new modules, and more!",
-            color=0xffd700
+            color=0x808080
         )
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else self.bot.user.display_avatar.url)
         embed = add_dravon_footer(embed)
         

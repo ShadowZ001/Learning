@@ -365,8 +365,9 @@ class Music(commands.Cog):
         """Create the music player embed"""
         embed = discord.Embed(
             title="🎶 Music Player",
-            color=0x7289da
+            color=0x808080
         )
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         
         if player.current:
             embed.add_field(
@@ -443,8 +444,9 @@ class Music(commands.Cog):
             embed = discord.Embed(
                 title="❌ Error",
                 description="You need to be in a voice channel to use music commands!",
-                color=0xff0000
+                color=0x87CEEB
             )
+            embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
             embed = add_dravon_footer(embed)
             await ctx.send(embed=embed)
             return
@@ -459,8 +461,9 @@ class Music(commands.Cog):
                 embed = discord.Embed(
                     title="🔒 Premium Feature",
                     description="Spotify music streaming is a premium-only feature!\n\nUpgrade to premium to enjoy:\n🎶 High-quality Spotify streaming\n🎵 Unlimited Spotify playlists\n✨ And much more!",
-                    color=0xffd700
+                    color=0x87CEEB
                 )
+                embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
                 embed = add_dravon_footer(embed)
                 await ctx.send(embed=embed)
                 return
@@ -918,9 +921,10 @@ class Music(commands.Cog):
         embed = discord.Embed(
             title="🎵 Dravon Music Player Help",
             description="**Complete music system with multi-platform support**\n\nSupports YouTube, Spotify, and SoundCloud with autoplay and interactive controls!\n\n*Select a category from the dropdown below for detailed information!*",
-            color=0xe91e63
+            color=0x808080
         )
         
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         embed.set_thumbnail(url=ctx.bot.user.display_avatar.url)
         embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413172308410892372/ba87b97c-3bb6-46c6-855d-f8b3076779d2.jpg?ex=68baf6c5&is=68b9a545&hm=8d31576fa4bfb3804a0d7ea5f1f4f98e6ddcb32430cf9a5f487a1e0b0ce62b11&")
         embed = add_dravon_footer(embed)

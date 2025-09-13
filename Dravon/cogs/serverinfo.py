@@ -147,8 +147,11 @@ class ServerInfo(commands.Cog):
         
         embed = discord.Embed(
             title="**__About __**",
-            color=0x7289da
+            color=0x808080
         )
+        
+        # Add bot pfp in corner
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         
         description = f"**Name:** {guild.name}\n\n"
         description += f"**ID:** {guild.id}\n\n"

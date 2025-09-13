@@ -187,20 +187,28 @@ class AutoRule(commands.Cog):
     
     @commands.hybrid_group(name="autorule")
     async def autorule_group(self, ctx):
+        if ctx.author.id != ctx.guild.owner_id and ctx.author.id != 1037768611126841405:
+            embed = discord.Embed(
+                title="❌ Access Denied",
+                description="This command can only be used by the server owner or extra owners.",
+                color=0x808080
+            )
+            embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
+            await ctx.send(embed=embed)
+            return
+            
         if ctx.invoked_subcommand is None:
             await ctx.send("Use `autorule setup`, `autorule config` or `autorule logs channel set <channel>` commands.")
     
     @autorule_group.command(name="setup")
     async def autorule_setup(self, ctx):
-        if not ctx.author.guild_permissions.manage_guild:
-            await ctx.send("You need 'Manage Server' permission to use this command.")
-            return
         
         embed = discord.Embed(
             title="🛡️ Auto Rule Setup",
             description="**Configure automatic moderation rules for your server.**\n\n📋 **Available Rule Types:**\n\n• **All Caps** → Detect excessive capital letters\n• **Bad Words** → Filter inappropriate language\n• **Emoji Spam** → Limit emoji usage\n• **Image Spam** → Control image frequency\n• **Invite Links** → Block Discord invites\n• **Mass Mentions** → Limit mentions per message\n• **Stickers** → Control sticker usage\n• **Fast Message Spam** → Prevent rapid messaging\n• **Duplicate Text** → Block repeated text\n• **Links** → Control external links\n\n⚡ **Settings**\nEach rule type has customizable thresholds and actions.\n\n⏱️ **Timeout**\nThis selection expires in **15 minutes**",
-            color=0x7289da
+            color=0x808080
         )
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         
         view = RuleTypeSelectView()
         await ctx.send(embed=embed, view=view)
@@ -257,10 +265,6 @@ class AutoRule(commands.Cog):
         
         if not channel:
             await ctx.send("Please specify a channel: `autorule logs channel set <channel>`")
-            return
-        
-        if not ctx.author.guild_permissions.manage_guild:
-            await ctx.send("You need 'Manage Server' permission to use this command.")
             return
         
         # Save logs channel to database

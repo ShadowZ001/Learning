@@ -18,7 +18,7 @@ class AFKSettingsView(discord.ui.View):
             description=f"<@{self.user_id}>: You're now AFK with the status: {self.reason}\n*You will receive DMs when mentioned*",
             color=0x808080
         )
-        embed = add_dravon_footer(embed)
+        embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
         await interaction.response.edit_message(embed=embed, view=None)
     
@@ -31,7 +31,7 @@ class AFKSettingsView(discord.ui.View):
             description=f"<@{self.user_id}>: You're now AFK with the status: {self.reason}\n*You will not receive DMs when mentioned*",
             color=0x808080
         )
-        embed = add_dravon_footer(embed)
+        embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
         await interaction.response.edit_message(embed=embed, view=None)
 
@@ -48,7 +48,7 @@ class AFK(commands.Cog):
             description=f"Setting AFK status: **{reason}**\n\nChoose your notification preference:",
             color=0x808080
         )
-        embed = add_dravon_footer(embed)
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         
         view = AFKSettingsView(self.bot, ctx.author.id, reason)
         await ctx.send(embed=embed, view=view)
@@ -66,9 +66,9 @@ class AFK(commands.Cog):
             embed = discord.Embed(
                 title="👋 Welcome Back!",
                 description=f"{message.author.mention}, your AFK status has been removed.",
-                color=0x00ff00
+                color=0x808080
             )
-            embed = add_dravon_footer(embed)
+            embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
             
             await message.channel.send(embed=embed, delete_after=5)
         
@@ -86,7 +86,7 @@ class AFK(commands.Cog):
                         description=f"{mentioned_user.mention} is currently AFK: **{reason}**",
                         color=0x808080
                     )
-                    embed = add_dravon_footer(embed)
+                    embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
                     
                     await message.channel.send(embed=embed, delete_after=10)
                     
@@ -96,9 +96,9 @@ class AFK(commands.Cog):
                             dm_embed = discord.Embed(
                                 title="📩 You were mentioned while AFK",
                                 description=f"**Server:** {message.guild.name}\n**Channel:** {message.channel.mention}\n**User:** {message.author.mention}\n**Message:** {message.content[:100]}{'...' if len(message.content) > 100 else ''}",
-                                color=0x7289da
+                                color=0x808080
                             )
-                            dm_embed = add_dravon_footer(dm_embed)
+                            dm_embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
                             
                             await mentioned_user.send(embed=dm_embed)
                         except:

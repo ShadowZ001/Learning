@@ -11,12 +11,13 @@ class StatsView(discord.ui.View):
         super().__init__(timeout=300)
         self.bot = bot
     
-    @discord.ui.button(label="General", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="General", style=discord.ButtonStyle.secondary, emoji="📊")
     async def general_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(color=0x808080)
         embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         
         # Calculate uptime
+        uptime_seconds = int(time.time() - self.bot.start_time)
         uptime_str = f"<t:{int(self.bot.start_time)}:R>"
         
         # Get ping
@@ -44,7 +45,7 @@ class StatsView(discord.ui.View):
         embed.description = description
         await interaction.response.edit_message(embed=embed, view=self)
     
-    @discord.ui.button(label="System", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="System", style=discord.ButtonStyle.secondary, emoji="💻")
     async def system_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(color=0x808080)
         embed.set_thumbnail(url=self.bot.user.display_avatar.url)
@@ -76,38 +77,45 @@ class StatsView(discord.ui.View):
         embed.description = description
         await interaction.response.edit_message(embed=embed, view=self)
     
-    @discord.ui.button(label="Team", style=discord.ButtonStyle.secondary, row=0)
+    @discord.ui.button(label="Team", style=discord.ButtonStyle.secondary, emoji="👥")
     async def team_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
-        embed = discord.Embed(
-            title="Dravon Development Team",
-            description="Meet the amazing team behind Dravon Bot!",
-            color=0x808080
-        )
-        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-        
-        embed.add_field(
-            name="Developers",
-            value="• **ShadowZ** - Lead Developer\n• **CodeX** - Backend Developer\n• **Luna** - Frontend Developer",
-            inline=False
-        )
-        
-        embed.add_field(
-            name="Designers",
-            value="• **Pixel** - UI/UX Designer\n• **Nova** - Graphics Designer",
-            inline=True
-        )
-        
-        embed.add_field(
-            name="Support Team",
-            value="• **Echo** - Community Manager\n• **Zen** - Support Specialist",
-            inline=True
-        )
-        
-        await interaction.response.edit_message(embed=embed, view=self)
+        # Get the existing team command embed
+        teams_cog = self.bot.get_cog('Teams')
+        if teams_cog:
+            # Create team embed similar to existing team command
+            embed = discord.Embed(
+                title="👥 Dravon Development Team",
+                description="Meet the amazing team behind Dravon Bot!",
+                color=0x808080
+            )
+            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            
+            embed.add_field(
+                name="🔧 Developers",
+                value="• **ShadowZ** - Lead Developer\n• **CodeX** - Backend Developer\n• **Luna** - Frontend Developer",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="🎨 Designers",
+                value="• **Pixel** - UI/UX Designer\n• **Nova** - Graphics Designer",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="🛠️ Support Team",
+                value="• **Echo** - Community Manager\n• **Zen** - Support Specialist",
+                inline=True
+            )
+            
+            await interaction.response.edit_message(embed=embed, view=self)
+        else:
+            await interaction.response.send_message("Team information not available.", ephemeral=True)
 
 class Stats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bot.start_time = time.time()
     
     @commands.hybrid_command(name="stats")
     async def stats(self, ctx):

@@ -22,29 +22,33 @@ class TeamsView(discord.ui.View):
             embed = discord.Embed(
                 title="👑 Founder / Owner",
                 description="<@1037768611126841405> is the visionary leader and founder of this project.\nThey set the direction, ensure quality, and make the big decisions that shape the future of this bot.\nWithout their vision, none of this would exist.",
-                color=0xffd700
+                color=0x808080
             )
+            embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
         elif role == "co_owner":
             embed = discord.Embed(
                 title="🤝 Co-Owner",
                 description="<@1255206310904074290> is the right hand of the founder.\nThey help manage the project, organize tasks, and step in whenever important decisions need support.\nA crucial pillar of the team.",
-                color=0xff6b6b
+                color=0x808080
             )
+            embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
         elif role == "developer":
             embed = discord.Embed(
                 title="💻 Developer",
                 description="<@1037768611126841405> is the brains behind the code.\nFrom core features to advanced systems, they design and maintain the bot's functionalities.\nAlways working to keep the bot stable, fast, and secure.",
-                color=0x4ecdc4
+                color=0x808080
             )
+            embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
         elif role == "community_manager":
             embed = discord.Embed(
                 title="🌐 Community Manager",
                 description="<@1130089558734803025> bridges the gap between the users and the team.\nThey manage communication, feedback, and make sure the community stays engaged, happy, and heard.",
-                color=0x45b7d1
+                color=0x808080
             )
+            embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
         embed = add_dravon_footer(embed)
         view = TeamsView()
@@ -61,8 +65,9 @@ class Teams(commands.Cog):
         embed = discord.Embed(
             title="🤝 Meet Our Team",
             description="These are the dedicated people who keep this bot running smoothly and safe for the community.\nClick the dropdown below to learn more about each member's role.",
-            color=0x7289da
+            color=0x808080
         )
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         
         embed.add_field(
             name="👑 Founder/Owner",

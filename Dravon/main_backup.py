@@ -25,7 +25,6 @@ class DravonBot(commands.Bot):
         self.cooldowns = {}  # User cooldown tracking
         self.bot_admin_id = 1037768611126841405  # Main bot admin
         self.bot_admins = {1037768611126841405}  # Set of bot admins
-        self.start_time = time.time()  # Bot start time
     
     async def get_prefix(self, message):
         if not message.guild:
@@ -44,8 +43,8 @@ class DravonBot(commands.Bot):
         await self.load_extension('cogs.autorole')
         await self.load_extension('cogs.purge')
         await self.load_extension('cogs.moderation')
-        await self.load_extension('cogs.automod_advanced')
-        await self.load_extension('cogs.antinuke_advanced')
+        await self.load_extension('cogs.automod')
+        await self.load_extension('cogs.antinuke')
         await self.load_extension('cogs.logs')
         await self.load_extension('cogs.giveaway')
         await self.load_extension('cogs.boost')
@@ -74,8 +73,7 @@ class DravonBot(commands.Bot):
         await self.load_extension('cogs.invites')
         await self.load_extension('cogs.basic_moderation')
         await self.load_extension('cogs.ping')
-        await self.load_extension('cogs.media')
-        await self.load_extension('cogs.music_panel')
+        # await self.load_extension('cogs.premiumhelp')  # Comment out if doesn't exist
 
         try:
             synced = await self.tree.sync()
@@ -168,56 +166,59 @@ class DravonBot(commands.Bot):
                 found_suggestion = False
                 for cmd, aliases in suggestions.items():
                     if attempted_command in aliases or any(attempted_command.startswith(alias) for alias in aliases):
-                        embed = discord.Embed(
-                            title="❓ Did you mean?",
-                            description=f"Command `{attempted_command}` not found.\n\n**Did you mean:** `>{cmd}`?",
-                            color=0x808080
-                        )
-                        embed.set_footer(text="Tip: Check spelling and try again")
-                        await message.channel.send(embed=embed, delete_after=6)
+                        await message.channel.send(f"❓ Did you mean `>{cmd}`?", delete_after=5)
                         found_suggestion = True
                         break
                 
                 # Generic suggestion for completely unknown commands
                 if not found_suggestion and len(attempted_command) > 2:
-                    embed = discord.Embed(
-                        title="❓ Unknown Command",
-                        description=f"Command `{attempted_command}` not found.\n\n**Try these instead:**\n• `>help` - View all commands\n• `>musicpanel` or `>mp` - Music controls\n• `>voicepanel` or `>vp` - Voice controls",
-                        color=0x808080
-                    )
-                    embed.set_footer(text="Tip: Use >help to see all available commands")
-                    await message.channel.send(embed=embed, delete_after=8)
+                    await message.channel.send(f"❓ Unknown command. Try `>help` for available commands.", delete_after=5)
         
         # Bot mention response
         if message.guild and (f'<@{self.user.id}>' in message.content or f'<@!{self.user.id}>' in message.content):
             prefix = await self.get_prefix(message)
             
             embed = discord.Embed(
-                title=f"{self.user.name}",
-                description=f"My prefix is `{prefix}`\n\nUse `{prefix}help` to see all my commands!",
-                color=0x808080
+                title=f"🤖 {self.user.name}",
+                description=f"⚙️ **My prefix is** `{prefix}`\n\n❓ **Use** `{prefix}help` **to see all my commands!**",
+                color=0x7289da
             )
-            embed.set_author(name="Dravon", icon_url=self.user.display_avatar.url)
-            embed.set_thumbnail(url=self.user.display_avatar.url)
             
+            embed.set_footer(text=f"Requested by {message.author.display_name}", icon_url=message.author.display_avatar.url)
+            embed.set_author(name=f"{self.user.name}", icon_url=self.user.display_avatar.url)
+            
+            # Create buttons
             view = discord.ui.View(timeout=300)
-            
-            invite_btn = discord.ui.Button(
-                label="Invite",
-                style=discord.ButtonStyle.link,
-                url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot",
-                emoji="🔗"
-            )
             
             support_btn = discord.ui.Button(
                 label="Support",
                 style=discord.ButtonStyle.link,
-                url="https://discord.gg/UKR78VcEtg",
-                emoji="🛠️"
+                url="https://discord.gg/UKR78VcEtg"
             )
             
-            view.add_item(invite_btn)
+            invite_btn = discord.ui.Button(
+                label="Invite Me",
+                style=discord.ButtonStyle.link,
+                url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot"
+            )
+            
+            delete_btn = discord.ui.Button(
+                emoji="🗑️",
+                style=discord.ButtonStyle.danger,
+                custom_id="delete_message"
+            )
+            
+            async def delete_callback(interaction):
+                if interaction.user.id == message.author.id:
+                    await interaction.message.delete()
+                else:
+                    await interaction.response.send_message("Only the command author can delete this message.", ephemeral=True)
+            
+            delete_btn.callback = delete_callback
+            
             view.add_item(support_btn)
+            view.add_item(invite_btn)
+            view.add_item(delete_btn)
             
             await message.channel.send(embed=embed, view=view)
             return

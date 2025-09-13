@@ -153,8 +153,11 @@ class UserInfo(commands.Cog):
         
         embed = discord.Embed(
             title=f"👤 User Information",
-            color=0x000000
+            color=0x808080
         )
+        
+        # Add bot pfp in corner
+        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
         
         # Set user avatar as thumbnail and try to get banner
         embed.set_thumbnail(url=user.display_avatar.url)

@@ -12,7 +12,8 @@ class BotInfoView(discord.ui.View):
             label="Invite Me",
             style=discord.ButtonStyle.link,
             url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot",
-            emoji="🔗"
+            emoji="🔗",
+            row=0
         )
         self.add_item(invite_button)
         
@@ -21,7 +22,8 @@ class BotInfoView(discord.ui.View):
             label="Support Server",
             style=discord.ButtonStyle.link,
             url="https://discord.gg/UKR78VcEtg",
-            emoji="💬"
+            emoji="💬",
+            row=0
         )
         self.add_item(support_button)
 
@@ -56,7 +58,7 @@ class BotInfo(commands.Cog):
         embed = discord.Embed(
             title="Dravon Bot Information",
             description="*Your all-in-one Discord server management solution*",
-            color=0x7289da
+            color=0x808080
         )
         
         # Basic Information
