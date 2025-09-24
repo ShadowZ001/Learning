@@ -5,7 +5,7 @@ class Docs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='docs', aliases=['documentation'])
+    @commands.hybrid_command(name='docs', aliases=['documentation'])
     async def docs(self, ctx):
         try:
             embed = discord.Embed(

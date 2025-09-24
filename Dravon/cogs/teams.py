@@ -21,10 +21,10 @@ class TeamsView(discord.ui.View):
         if role == "owner":
             embed = discord.Embed(
                 title="👑 Founder / Owner",
-                description="<@1037768611126841405> is the visionary leader and founder of this project.\nThey set the direction, ensure quality, and make the big decisions that shape the future of this bot.\nWithout their vision, none of this would exist.",
+                description="<@1037768611126841405> - Visionary leader and founder of this project.",
                 color=0x808080
             )
-            embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
+            embed.set_thumbnail(url=interaction.client.user.display_avatar.url)
         
         elif role == "co_owner":
             embed = discord.Embed(
@@ -50,7 +50,7 @@ class TeamsView(discord.ui.View):
             )
             embed.set_author(name="Dravon", icon_url=interaction.client.user.display_avatar.url)
         
-        embed = add_dravon_footer(embed)
+        # Remove footer for smooth design
         view = TeamsView()
         await interaction.response.edit_message(embed=embed, view=view)
 
@@ -64,10 +64,10 @@ class Teams(commands.Cog):
         
         embed = discord.Embed(
             title="🤝 Meet Our Team",
-            description="These are the dedicated people who keep this bot running smoothly and safe for the community.\nClick the dropdown below to learn more about each member's role.",
+            description="The dedicated people behind this bot.",
             color=0x808080
         )
-        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         
         embed.add_field(
             name="👑 Founder/Owner",

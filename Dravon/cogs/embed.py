@@ -309,6 +309,99 @@ class EmbedChannelSelectView(discord.ui.View):
         
         return text
 
+class EmbedDeleteView(discord.ui.View):
+    def __init__(self, bot, guild_id, embeds):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild_id = guild_id
+        self.embeds = embeds
+        
+        # Create dropdown with embed options
+        options = []
+        for embed_name in list(embeds.keys())[:25]:  # Discord limit
+            options.append(discord.SelectOption(
+                label=embed_name,
+                description=f"Delete {embed_name} embed",
+                value=embed_name
+            ))
+        
+        if options:
+            self.add_item(EmbedDeleteSelect(options))
+    
+    @discord.ui.button(label="🔙 Back", style=discord.ButtonStyle.secondary)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title="📜 Embed Management",
+            description="Use embed commands like `embed setup`, `embed list`, etc.",
+            color=0x7289da
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+
+class EmbedDeleteSelect(discord.ui.Select):
+    def __init__(self, options):
+        super().__init__(placeholder="Select an embed to delete...", options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        embed_name = self.values[0]
+        
+        # Confirmation view
+        view = EmbedDeleteConfirmView(interaction.client, interaction.guild.id, embed_name)
+        
+        embed = discord.Embed(
+            title="⚠️ Confirm Deletion",
+            description=f"Are you sure you want to delete the embed `{embed_name}`?\n\nThis action cannot be undone.",
+            color=0xff8c00
+        )
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+
+class EmbedDeleteConfirmView(discord.ui.View):
+    def __init__(self, bot, guild_id, embed_name):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild_id = guild_id
+        self.embed_name = embed_name
+    
+    @discord.ui.button(label="🗑️ Delete", style=discord.ButtonStyle.danger)
+    async def delete_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        success = await self.bot.db.delete_embed(self.guild_id, self.embed_name)
+        
+        if success:
+            embed = discord.Embed(
+                title="✅ Embed Deleted",
+                description=f"Embed `{self.embed_name}` has been successfully deleted.",
+                color=0x00ff00
+            )
+        else:
+            embed = discord.Embed(
+                title="❌ Delete Failed",
+                description=f"Failed to delete embed `{self.embed_name}`.",
+                color=0xff0000
+            )
+        
+        await interaction.response.edit_message(embed=embed, view=None)
+    
+    @discord.ui.button(label="🔙 Back", style=discord.ButtonStyle.secondary)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Go back to embed list
+        embeds = await self.bot.db.get_all_embeds(self.guild_id)
+        
+        if not embeds:
+            embed = discord.Embed(
+                title="📜 No Embeds Found",
+                description="No saved embeds found. Use `/embed setup` to create one.",
+                color=0x7289da
+            )
+            await interaction.response.edit_message(embed=embed, view=None)
+        else:
+            embed = discord.Embed(
+                title="🗑️ Delete Embed",
+                description="Select an embed from the dropdown to delete it.",
+                color=0xff6b6b
+            )
+            view = EmbedDeleteView(self.bot, self.guild_id, embeds)
+            await interaction.response.edit_message(embed=embed, view=view)
+
 class Embed(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -373,28 +466,31 @@ class Embed(commands.Cog):
         await ctx.send(embed=embed)
     
     @embed_group.command(name="delete")
-    async def embed_delete(self, ctx, name: str):
-        """Deletes a saved embed by name"""
+    async def embed_delete(self, ctx):
+        """Delete saved embeds with dropdown selection"""
         if not ctx.author.guild_permissions.manage_guild:
             await ctx.send("You need 'Manage Server' permission to use this command.")
             return
         
-        success = await self.bot.db.delete_embed(ctx.guild.id, name.lower())
+        embeds = await self.bot.db.get_all_embeds(ctx.guild.id)
         
-        if success:
+        if not embeds:
             embed = discord.Embed(
-                title="✅ Embed Deleted",
-                description=f"Embed `{name}` has been deleted.",
-                color=0x00ff00
+                title="📜 No Embeds Found",
+                description="No saved embeds found. Use `/embed setup` to create one.",
+                color=0x7289da
             )
-        else:
-            embed = discord.Embed(
-                title="❌ Embed Not Found",
-                description=f"No embed named `{name}` was found.",
-                color=0xff0000
-            )
+            await ctx.send(embed=embed)
+            return
         
-        await ctx.send(embed=embed)
+        embed = discord.Embed(
+            title="🗑️ Delete Embed",
+            description="Select an embed from the dropdown to delete it.",
+            color=0xff6b6b
+        )
+        
+        view = EmbedDeleteView(self.bot, ctx.guild.id, embeds)
+        await ctx.send(embed=embed, view=view)
     
     @embed_group.command(name="edit")
     async def embed_edit(self, ctx, name: str):

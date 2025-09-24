@@ -339,16 +339,20 @@ class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
+    def is_owner_only(self, guild, user):
+        return user.id == guild.owner_id
+    
     @commands.hybrid_group(name="automod")
     async def automod_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            if not ctx.author.guild_permissions.manage_guild:
+            # Check if user has security access (owner + extranovant only)
+            if not self.is_owner_only(ctx.guild, ctx.author):
                 embed = discord.Embed(
-                    title="❌ Permission Required",
-                    description="You need **Manage Server** permission to use AutoMod commands.",
-                    color=0xff0000
+                    title="❌ Access Restricted",
+                    description="You cannot use this command.\n\nOnly server owners and extranovant can access security features.",
+                    color=0x808080
                 )
-                embed = add_dravon_footer(embed)
+                embed.set_thumbnail(url=self.bot.user.display_avatar.url)
                 await ctx.send(embed=embed)
                 return
             
@@ -397,16 +401,55 @@ class AutoMod(commands.Cog):
             view = MainSetupView()
             await ctx.send(embed=embed, view=view)
     
+    @automod_group.command(name="config")
+    async def automod_config(self, ctx):
+        rules = await self.bot.db.get_all_automod_rules(ctx.guild.id) if hasattr(self.bot, 'db') else {}
+        active_rules = len([r for r in rules.values() if r.get('enabled', False)]) if rules else 0
+        
+        embed = discord.Embed(
+            title="🤖 AutoMod Configuration",
+            description="Current automatic moderation settings",
+            color=0x808080
+        )
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+        
+        embed.add_field(
+            name="System Status",
+            value=f"✅ {active_rules} rules active" if active_rules > 0 else "❌ No rules configured",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="Protection Modules",
+            value="• Spam Protection\n• Content Filtering\n• Link Protection\n• Invite Blocking",
+            inline=True
+        )
+        
+        if rules:
+            rule_list = []
+            for filter_type, config in list(rules.items())[:5]:
+                status = "✅" if config.get('enabled') else "❌"
+                rule_list.append(f"{status} {filter_type.replace('_', ' ').title()}")
+            
+            embed.add_field(
+                name="Active Rules",
+                value="\n".join(rule_list) if rule_list else "No rules configured",
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
+    
     @automod_group.command(name="setup")
     async def automod_setup(self, ctx):
         """Interactive AutoMod setup wizard"""
-        if not ctx.author.guild_permissions.manage_guild:
+        # Check if user has security access (owner + extranovant only)
+        if not self.is_owner_only(ctx.guild, ctx.author):
             embed = discord.Embed(
-                title="❌ Permission Required",
-                description="You need **Manage Server** permission to setup AutoMod.",
-                color=0xff0000
+                title="❌ Access Restricted",
+                description="You cannot use this command.\n\nOnly server owners and extranovant can access security features.",
+                color=0x808080
             )
-            embed = add_dravon_footer(embed)
+            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
             await ctx.send(embed=embed)
             return
         

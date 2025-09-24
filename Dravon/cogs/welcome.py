@@ -16,7 +16,8 @@ class WelcomeSetupView(discord.ui.View):
             "thumbnail_url": None,
             "footer": None,
             "dm_welcome": False,
-            "channel_id": None
+            "channel_id": None,
+            "chat_format": False
         }
     
     async def update_preview(self, interaction: discord.Interaction):
@@ -72,6 +73,12 @@ class WelcomeSetupView(discord.ui.View):
     async def set_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
         view = ChannelSelectView(self)
         await interaction.response.edit_message(view=view)
+    
+    @discord.ui.button(label="Chat Format", style=discord.ButtonStyle.secondary, row=1)
+    async def toggle_chat_format(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.config["chat_format"] = not self.config["chat_format"]
+        button.label = f"Chat Format: {'ON' if self.config['chat_format'] else 'OFF'}"
+        await self.update_preview(interaction)
     
     @discord.ui.button(label="Done", style=discord.ButtonStyle.success, row=1)
     async def finish_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -316,21 +323,39 @@ class Welcome(commands.Cog):
         if not channel:
             return
         
-        embed = create_welcome_embed(
-            title=config["title"],
-            description=config["description"],
-            color=config["color"],
-            image_url=config["image_url"],
-            thumbnail_url=config.get("thumbnail_url"),
-            footer=config.get("footer"),
-            member=member
-        )
-        
-        await channel.send(embed=embed)
+        if config.get("chat_format", False):
+            # Send as normal chat message
+            message = f"{config.get('title', 'Welcome!')} {member.mention}\n{config.get('description', 'Welcome to the server!')}"
+            await channel.send(message)
+        else:
+            # Send as embed
+            embed = create_welcome_embed(
+                title=config["title"],
+                description=config["description"],
+                color=config["color"],
+                image_url=config["image_url"],
+                thumbnail_url=config.get("thumbnail_url"),
+                footer=config.get("footer"),
+                member=member
+            )
+            await channel.send(embed=embed)
         
         if config.get("dm_welcome", False):
             try:
-                await member.send(embed=embed)
+                if config.get("chat_format", False):
+                    message = f"{config.get('title', 'Welcome!')} {member.mention}\n{config.get('description', 'Welcome to the server!')}"
+                    await member.send(message)
+                else:
+                    embed = create_welcome_embed(
+                        title=config["title"],
+                        description=config["description"],
+                        color=config["color"],
+                        image_url=config["image_url"],
+                        thumbnail_url=config.get("thumbnail_url"),
+                        footer=config.get("footer"),
+                        member=member
+                    )
+                    await member.send(embed=embed)
             except:
                 pass
 

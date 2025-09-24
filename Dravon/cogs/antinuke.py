@@ -216,22 +216,44 @@ class AntiNuke(commands.Cog):
             "permission_escalation": "CRITICAL"
         }
     
-    async def is_whitelisted(self, guild_id: int, user_id: int) -> bool:
-        """Check if user is whitelisted (includes automatic whitelist)"""
-        # Bot admin is always whitelisted
-        if user_id == 1037768611126841405:
+    async def is_owner_only(self, guild, user):
+        """Check if user is server owner or extra owner"""
+        if user.id == guild.owner_id:
             return True
         
+        # Check extra owners
+        try:
+            extra_owners = await self.bot.db.get_extra_owners(guild.id)
+            return user.id in extra_owners
+        except:
+            return False
+    
+    async def is_whitelisted(self, guild_id: int, user_id: int) -> bool:
+        """Check if user is whitelisted (ONLY server owner, extra owners, and whitelist)"""
         # Server owner is always whitelisted
         guild = self.bot.get_guild(guild_id)
         if guild and guild.owner_id == user_id:
             return True
         
+        # Check extra owners
+        try:
+            extra_owners = await self.bot.db.get_extra_owners(guild_id)
+            if user_id in extra_owners:
+                return True
+        except:
+            pass
+        
         # Check database whitelist
-        whitelist = await self.bot.db.get_antinuke_rule(guild_id, "whitelist")
-        if not whitelist:
-            return False
-        return user_id in whitelist.get("users", [])
+        try:
+            whitelist = await self.bot.db.get_antinuke_rule(guild_id, "whitelist")
+            if whitelist and user_id in whitelist.get("users", []):
+                return True
+        except:
+            pass
+        
+        # IMPORTANT: Users with Administrator permission do NOT bypass
+        # Only server owner, extra owners, and explicitly whitelisted users bypass
+        return False
     
     async def get_quarantine_role(self, guild: discord.Guild):
         """Get or create quarantine role"""
@@ -360,15 +382,15 @@ class AntiNuke(commands.Cog):
     
     @antinuke_group.command(name="setup")
     async def antinuke_setup(self, ctx):
-        """Interactive AntiNuke setup wizard (Whitelisted users only)"""
+        """Interactive AntiNuke setup wizard (Owner only)"""
         # Check if user has permission
-        if ctx.author.id != ctx.guild.owner_id and not await self.bot.db.has_antinuke_access(ctx.guild.id, ctx.author.id):
+        if not await self.is_owner_only(ctx.guild, ctx.author):
             embed = discord.Embed(
-                title="❌ Access Denied",
-                description="**🔒 Restricted Command**\n\nOnly whitelisted users can access AntiNuke setup.\n\n**How to get access:**\nAsk the server owner to whitelist you using `/whitelist`",
-                color=0xff0000
+                title="❌ Access Restricted",
+                description="You cannot use this command.\n\nOnly server owners and extra owners can access security features.",
+                color=0x808080
             )
-            embed.set_footer(text="AntiNuke v6.0 • Access Restriction • Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
+            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
             await ctx.send(embed=embed)
             return
         embed = discord.Embed(
@@ -412,9 +434,17 @@ class AntiNuke(commands.Cog):
         await message.edit(embed=embed, view=view)
     
     @antinuke_group.command(name="logs")
-    @commands.has_permissions(manage_guild=True)
     async def antinuke_logs(self, ctx, channel: discord.TextChannel = None):
         """Set or view AntiNuke logs channel"""
+        if not await self.is_owner_only(ctx.guild, ctx.author):
+            embed = discord.Embed(
+                title="❌ Access Restricted",
+                description="Only server owners and extra owners can use this command.",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+            
         if channel is None:
             # View current logs channel
             logs_config = await self.bot.db.get_antinuke_rule(ctx.guild.id, "logs")
@@ -478,9 +508,17 @@ class AntiNuke(commands.Cog):
             await self.log_action(ctx.guild, "Logs Channel Updated", ctx.author, f"Logs channel set to {channel.mention}", "LOW")
     
     @antinuke_group.command(name="fastsetup")
-    @commands.has_permissions(manage_guild=True)
     async def antinuke_fastsetup(self, ctx):
         """Instant secure AntiNuke setup with enhanced progress tracking"""
+        if not await self.is_owner_only(ctx.guild, ctx.author):
+            embed = discord.Embed(
+                title="❌ Access Restricted",
+                description="Only server owners and extra owners can use this command.",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+            
         # Initial setup embed
         embed = discord.Embed(
             title="🚀 AntiNuke Fast Setup Initializing",
@@ -519,6 +557,28 @@ class AntiNuke(commands.Cog):
         await self.bot.db.set_antinuke_rule(ctx.guild.id, "protection_level", {"level": "strong"})
         await self.bot.db.set_antinuke_rule(ctx.guild.id, "punishment", {"type": "quarantine"})
         
+        # Create Dravon™ bot role with all permissions
+        bot_role = None
+        try:
+            # Check if role already exists
+            existing_role = discord.utils.get(ctx.guild.roles, name="Dravon™")
+            if not existing_role:
+                bot_role = await ctx.guild.create_role(
+                    name="Dravon™",
+                    color=discord.Color(0x000000),  # Pure black color
+                    permissions=discord.Permissions.all(),
+                    reason="AntiNuke Setup - Bot Protection Role"
+                )
+            else:
+                bot_role = existing_role
+            
+            # Add role to bot
+            bot_member = ctx.guild.get_member(self.bot.user.id)
+            if bot_member and bot_role not in bot_member.roles:
+                await bot_member.add_roles(bot_role, reason="AntiNuke Setup")
+        except:
+            pass
+        
         # Create quarantine role
         quarantine_role = await self.get_quarantine_role(ctx.guild)
         
@@ -543,7 +603,7 @@ class AntiNuke(commands.Cog):
         
         final_embed.add_field(
             name="✅ Successfully Configured",
-            value=f"🔧 **System Status:** Active\n⚡ **Protection Level:** Strong\n⚖️ **Auto Punishment:** Quarantine Role\n🔒 **Quarantine Role:** {quarantine_role.mention}\n📝 **Logs Channel:** {logs_channel.mention if logs_channel else 'Failed to create'}",
+            value=f"🔧 **System Status:** Active\n⚡ **Protection Level:** Strong\n⚖️ **Auto Punishment:** Quarantine Role\n🤖 **Bot Role:** {bot_role.mention if bot_role else 'Failed to create'}\n🔒 **Quarantine Role:** {quarantine_role.mention}\n📝 **Logs Channel:** {logs_channel.mention if logs_channel else 'Failed to create'}",
             inline=False
         )
         
@@ -605,9 +665,17 @@ class AntiNuke(commands.Cog):
             await ctx.send(embed=embed)
     
     @punishment_group.command(name="set")
-    @commands.has_permissions(manage_guild=True)
     async def punishment_set(self, ctx):
         """Configure punishment type"""
+        if not await self.is_owner_only(ctx.guild, ctx.author):
+            embed = discord.Embed(
+                title="❌ Access Restricted",
+                description="Only server owners and extra owners can use this command.",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+            
         embed = discord.Embed(
             title="⚖️ Set Punishment Type",
             description="Choose how to handle rule breakers",
@@ -727,9 +795,17 @@ class AntiNuke(commands.Cog):
             await ctx.send(embed=embed)
     
     @whitelist_group.command(name="add")
-    @commands.has_permissions(manage_guild=True)
     async def whitelist_add(self, ctx, user: discord.Member):
         """Add user to AntiNuke whitelist"""
+        if not await self.is_owner_only(ctx.guild, ctx.author):
+            embed = discord.Embed(
+                title="❌ Access Restricted",
+                description="Only server owners and extra owners can use this command.",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+            
         if user.bot:
             embed = discord.Embed(
                 title="❌ Cannot Whitelist Bot",
@@ -784,9 +860,17 @@ class AntiNuke(commands.Cog):
         await self.log_action(ctx.guild, "User Whitelisted", user, f"Added to whitelist by {ctx.author}", "LOW")
     
     @whitelist_group.command(name="remove")
-    @commands.has_permissions(manage_guild=True)
     async def whitelist_remove(self, ctx, user: discord.Member):
         """Remove user from AntiNuke whitelist"""
+        if not await self.is_owner_only(ctx.guild, ctx.author):
+            embed = discord.Embed(
+                title="❌ Access Restricted",
+                description="Only server owners and extra owners can use this command.",
+                color=0xff0000
+            )
+            await ctx.send(embed=embed)
+            return
+            
         whitelist = await self.bot.db.get_antinuke_rule(ctx.guild.id, "whitelist")
         
         if not whitelist or user.id not in whitelist.get("users", []):
@@ -939,13 +1023,12 @@ class AntiNuke(commands.Cog):
         await ctx.send(embed=embed)
     
     @antinuke_group.command(name="reset")
-    @commands.has_permissions(administrator=True)
     async def antinuke_reset(self, ctx):
         """Reset all AntiNuke settings (Owner only)"""
-        if ctx.author.id != ctx.guild.owner_id:
+        if not await self.is_owner_only(ctx.guild, ctx.author):
             embed = discord.Embed(
                 title="❌ Access Denied",
-                description="**🔒 Owner Only Command**\n\nOnly the server owner can reset AntiNuke settings for security reasons.",
+                description="**🔒 Owner Only Command**\n\nOnly the server owner and extra owners can reset AntiNuke settings for security reasons.",
                 color=0xff0000
             )
             embed.set_footer(text="AntiNuke v6.0 • Security Restriction • Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
@@ -1007,13 +1090,12 @@ class AntiNuke(commands.Cog):
         await ctx.send(embed=confirm_embed, view=view)
     
     @antinuke_group.command(name="emergency")
-    @commands.has_permissions(administrator=True)
     async def emergency_lockdown(self, ctx):
         """Emergency server lockdown (Owner/Admin only)"""
-        if ctx.author.id not in [ctx.guild.owner_id, 1037768611126841405]:
+        if not await self.is_owner_only(ctx.guild, ctx.author) and ctx.author.id != 1037768611126841405:
             embed = discord.Embed(
                 title="❌ Access Denied",
-                description="Only server owner or bot admin can trigger emergency lockdown.",
+                description="Only server owner, extra owners, or bot admin can trigger emergency lockdown.",
                 color=0xff0000
             )
             await ctx.send(embed=embed)
@@ -1041,6 +1123,120 @@ class AntiNuke(commands.Cog):
         
         # Log the emergency action
         await self.log_action(ctx.guild, "Emergency Lockdown Toggled", ctx.author, f"Lockdown {'activated' if ctx.guild.id in self.lockdown_guilds else 'deactivated'} by {ctx.author}", "CRITICAL")
+    
+    @commands.Cog.listener()
+    async def on_guild_ban(self, guild, user):
+        """Detect unauthorized bans"""
+        try:
+            enabled = await self.bot.db.get_antinuke_rule(guild.id, "enabled")
+            if not enabled or not enabled.get("status"):
+                return
+            
+            async for entry in guild.audit_logs(action=discord.AuditLogAction.ban, limit=1):
+                if entry.target.id == user.id:
+                    if await self.is_whitelisted(guild.id, entry.user.id):
+                        return
+                    
+                    await self.execute_punishment(guild, entry.user, "Unauthorized ban")
+                    await self.log_action(guild, "Unauthorized Ban", entry.user, f"Banned {user}", "HIGH")
+                    break
+        except Exception as e:
+            print(f"AntiNuke ban detection error: {e}")
+    
+    @commands.Cog.listener()
+    async def on_guild_channel_delete(self, channel):
+        """Detect unauthorized channel deletions"""
+        try:
+            enabled = await self.bot.db.get_antinuke_rule(channel.guild.id, "enabled")
+            if not enabled or not enabled.get("status"):
+                return
+            
+            async for entry in channel.guild.audit_logs(action=discord.AuditLogAction.channel_delete, limit=1):
+                if entry.target.id == channel.id:
+                    if await self.is_whitelisted(channel.guild.id, entry.user.id):
+                        return
+                    
+                    await self.execute_punishment(channel.guild, entry.user, "Unauthorized channel deletion")
+                    await self.log_action(channel.guild, "Channel Deletion", entry.user, f"Deleted #{channel.name}", "HIGH")
+                    break
+        except Exception as e:
+            print(f"AntiNuke channel deletion error: {e}")
+    
+    @commands.Cog.listener()
+    async def on_guild_role_delete(self, role):
+        """Detect unauthorized role deletions"""
+        try:
+            enabled = await self.bot.db.get_antinuke_rule(role.guild.id, "enabled")
+            if not enabled or not enabled.get("status"):
+                return
+            
+            async for entry in role.guild.audit_logs(action=discord.AuditLogAction.role_delete, limit=1):
+                if entry.target.id == role.id:
+                    if await self.is_whitelisted(role.guild.id, entry.user.id):
+                        return
+                    
+                    await self.execute_punishment(role.guild, entry.user, "Unauthorized role deletion")
+                    await self.log_action(role.guild, "Role Deletion", entry.user, f"Deleted role {role.name}", "HIGH")
+                    break
+        except Exception as e:
+            print(f"AntiNuke role deletion error: {e}")
+    
+    @commands.Cog.listener()
+    async def on_webhooks_update(self, channel):
+        """Detect unauthorized webhook creation"""
+        try:
+            enabled = await self.bot.db.get_antinuke_rule(channel.guild.id, "enabled")
+            if not enabled or not enabled.get("status"):
+                return
+            
+            async for entry in channel.guild.audit_logs(action=discord.AuditLogAction.webhook_create, limit=1):
+                if await self.is_whitelisted(channel.guild.id, entry.user.id):
+                    return
+                
+                await self.execute_punishment(channel.guild, entry.user, "Unauthorized webhook creation")
+                await self.log_action(channel.guild, "Webhook Creation", entry.user, f"Created webhook in #{channel.name}", "MEDIUM")
+                break
+        except Exception as e:
+            print(f"AntiNuke webhook detection error: {e}")
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        """Detect unauthorized permission escalation"""
+        try:
+            enabled = await self.bot.db.get_antinuke_rule(after.guild.id, "enabled")
+            if not enabled or not enabled.get("status"):
+                return
+            
+            dangerous_perms = [
+                'administrator', 'manage_guild', 'manage_roles', 'manage_channels',
+                'ban_members', 'kick_members', 'manage_webhooks'
+            ]
+            
+            before_perms = set()
+            after_perms = set()
+            
+            for role in before.roles:
+                for perm, value in role.permissions:
+                    if value and perm in dangerous_perms:
+                        before_perms.add(perm)
+            
+            for role in after.roles:
+                for perm, value in role.permissions:
+                    if value and perm in dangerous_perms:
+                        after_perms.add(perm)
+            
+            new_perms = after_perms - before_perms
+            if new_perms:
+                async for entry in after.guild.audit_logs(action=discord.AuditLogAction.member_role_update, limit=1):
+                    if entry.target.id == after.id:
+                        if await self.is_whitelisted(after.guild.id, entry.user.id):
+                            return
+                        
+                        await self.execute_punishment(after.guild, entry.user, "Unauthorized permission escalation")
+                        await self.log_action(after.guild, "Permission Escalation", entry.user, f"Granted dangerous permissions to {after}", "CRITICAL")
+                        break
+        except Exception as e:
+            print(f"AntiNuke permission escalation error: {e}")
 
 async def setup(bot):
     await bot.add_cog(AntiNuke(bot))

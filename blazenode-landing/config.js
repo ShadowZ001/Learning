@@ -9,7 +9,7 @@ module.exports = {
     SESSION_SECRET: 'blazenode_secret_key_2025_production_ready',
     
     // Pterodactyl Panel Configuration
-    PTERODACTYL_API_KEY: 'ptla_Q1aRhsnRiJ8PQEErS3IiknCuuAG1zdueM1OVck39LMN',
+    PTERODACTYL_API_KEY: 'ptla_94DjU483Bw5xPpd6msRhhdIR46Ei4XG9LI2qUGTzifY',
     PTERODACTYL_URL: 'https://panel.blazenode.site',
     
     // Bot API Configuration  
@@ -23,7 +23,7 @@ module.exports = {
     DISCORD_INVITE_LINK: 'https://discord.gg/PyfEzq5gQ',
     
     // Admin Configuration
-    ADMIN_EMAIL: 'dereckrich8@gmail.com',
+    ADMIN_EMAIL: 'dishapatel12376@gmail.com',
     
     // Environment
     NODE_ENV: process.env.NODE_ENV || 'development'
