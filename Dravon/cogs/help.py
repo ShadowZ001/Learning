@@ -1,7 +1,5 @@
 import discord
 from discord.ext import commands
-from utils.embed_utils import add_dravon_footer
-import asyncio
 
 class HelpView(discord.ui.View):
     def __init__(self, bot):
@@ -9,217 +7,316 @@ class HelpView(discord.ui.View):
         self.bot = bot
     
     @discord.ui.select(
-        placeholder="Select a category to view commands...",
+        placeholder="📋 Select a category to view commands...",
         options=[
-            discord.SelectOption(label="Moderation", description="Moderation and punishment commands", value="moderation"),
-            discord.SelectOption(label="Security", description="AntiNuke and security features", value="security"),
-            discord.SelectOption(label="Tickets", description="Ticket system management", value="tickets"),
-            discord.SelectOption(label="Giveaways", description="Giveaway creation and management", value="giveaways"),
-            discord.SelectOption(label="Server Setup", description="Welcome, leave, boost messages", value="setup"),
-            discord.SelectOption(label="AutoMod", description="Automatic moderation features", value="automod"),
-            discord.SelectOption(label="Information", description="Server and bot information", value="info"),
-            discord.SelectOption(label="Embed Builder", description="Custom embed creation", value="embeds"),
-            discord.SelectOption(label="Music Player", description="Play music from YouTube, Spotify", value="music"),
-            discord.SelectOption(label="Fun Commands", description="Kiss, slap, kill and other fun interactions", value="fun"),
-            discord.SelectOption(label="Utility", description="Prefix, purge, and other utilities", value="utility"),
-            discord.SelectOption(label="Invites", description="Invite tracking and management", value="invites"),
-            discord.SelectOption(label="Basic Moderation", description="Kick, ban, mute commands", value="basic_mod"),
-            discord.SelectOption(label="Media Filter", description="Media-only channel management", value="media")
+            discord.SelectOption(label="🛡️ Moderation", description="Ban, kick, mute, warn commands", value="moderation"),
+            discord.SelectOption(label="🔒 Security", description="AntiNuke & AutoMod protection", value="security"),
+            discord.SelectOption(label="🎵 Music", description="Play music from multiple sources", value="music"),
+            discord.SelectOption(label="🎫 Tickets", description="Support ticket system", value="tickets"),
+            discord.SelectOption(label="⚡ Reaction Roles", description="Emoji-based role assignment", value="reactions"),
+            discord.SelectOption(label="🔐 Verification", description="Server verification system", value="verification"),
+            discord.SelectOption(label="📝 Embeds", description="Custom embed creation", value="embeds"),
+            discord.SelectOption(label="🎮 Fun", description="Memes and interaction commands", value="fun"),
+            discord.SelectOption(label="🔧 Utility", description="Server info and helpful tools", value="utility"),
+            discord.SelectOption(label="👑 Admin", description="Server administration tools", value="admin"),
+            discord.SelectOption(label="🏠 Welcome", description="Welcome and leave messages", value="welcome"),
+            discord.SelectOption(label="🎁 Giveaways", description="Giveaway management system", value="giveaways"),
+            discord.SelectOption(label="📊 Stats", description="Server statistics and analytics", value="stats"),
+            discord.SelectOption(label="💎 Premium", description="Premium features and benefits", value="premium"),
+            discord.SelectOption(label="🔄 AutoMod", description="Advanced auto moderation", value="automod"),
+            discord.SelectOption(label="📢 Logs", description="Server logging system", value="logs"),
+            discord.SelectOption(label="🚀 Boost", description="Server boost rewards", value="boost"),
+            discord.SelectOption(label="📱 Voice Panel", description="Voice channel management", value="voice"),
+            discord.SelectOption(label="🎶 Music Panel", description="Music control panel", value="musicpanel"),
+            discord.SelectOption(label="💤 AFK", description="AFK status system", value="afk"),
+            discord.SelectOption(label="📨 Invites", description="Invite tracking system", value="invites"),
+            discord.SelectOption(label="🎯 AutoRole", description="Automatic role assignment", value="autorole"),
+            discord.SelectOption(label="⚙️ AutoRule", description="Automatic server rules", value="autorule"),
+            discord.SelectOption(label="🏆 Teams", description="Team management system", value="teams"),
+            discord.SelectOption(label="📈 Level Up", description="Leveling and XP system", value="levelup")
         ]
     )
     async def help_select(self, interaction: discord.Interaction, select: discord.ui.Select):
         category = select.values[0]
         
+        embed = discord.Embed(color=0x7289da)
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+        
         if category == "moderation":
-            embed = discord.Embed(
-                title="Moderation Commands",
-                description="Manage your server with powerful moderation tools",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            embed.title = "🛡️ Moderation Commands"
+            embed.description = "Keep your server safe with powerful moderation tools"
             embed.add_field(
-                name="Commands",
-                value="`>ban <user> [reason]` - Ban a user\n`>unban <user>` - Unban a user\n`>kick <user> [reason]` - Kick a user\n`>mute <user> [time] [reason]` - Mute a user\n`>unmute <user>` - Unmute a user\n`>warn <user> [reason]` - Warn a user\n`>warnings <user>` - View user warnings\n`>purge <amount>` - Delete messages",
+                name="Basic Moderation",
+                value="`/ban <user> [reason]` - Ban a member\n`/kick <user> [reason]` - Kick a member\n`/mute <user> <time> [reason]` - Mute a member\n`/purge <amount>` - Delete messages",
+                inline=False
+            )
+            embed.add_field(
+                name="Role Management",
+                value="`/roleadd <user> <role>` - Add role to user\n`/roleremove <user> <role>` - Remove role from user",
+                inline=False
+            )
+            embed.add_field(
+                name="Warning System",
+                value="`/warn <user> [reason]` - Warn a user\n`/warnclear <user>` - Clear user warnings\n`/warnlist` - List warned users\n`/warnconfig` - Configure warning system",
                 inline=False
             )
         
         elif category == "security":
-            embed = discord.Embed(
-                title="Security Commands",
-                description="Protect your server with AntiNuke v6.0",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            embed.title = "🔒 Security Commands"
+            embed.description = "Advanced server protection and security systems"
             embed.add_field(
-                name="Commands",
-                value="`>antinuke setup` - Configure AntiNuke protection\n`>antinuke config` - View current settings\n`>antinuke whitelist <user>` - Add extra owner\n`>antinuke logs <channel>` - Set logs channel\n`>antinuke enable <feature>` - Enable protection\n`>antinuke disable <feature>` - Disable protection",
+                name="AntiNuke System",
+                value="`/antinuke setup` - Configure protection\n`/antinuke fastsetup` - Quick setup\n`/antinuke whitelist` - Manage trusted users",
                 inline=False
             )
-        
-        elif category == "tickets":
-            embed = discord.Embed(
-                title="Ticket Commands",
-                description="Complete ticket system with categories",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
             embed.add_field(
-                name="Commands",
-                value="`>ticket setup` - Configure ticket system\n`>ticket config` - View ticket settings\n`>ticket logs <channel>` - Set ticket logs\n`>ticket add <user>` - Add user to ticket\n`>ticket close` - Close current ticket",
-                inline=False
-            )
-        
-        elif category == "giveaways":
-            embed = discord.Embed(
-                title="Giveaway Commands",
-                description="Falcon-style giveaway system",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-            embed.add_field(
-                name="Commands",
-                value="`>giveaway create` - Create a new giveaway\n`>giveaway end <id>` - End giveaway early\n`>giveaway reroll <id>` - Reroll winners\n`>giveaway list` - View active giveaways\n`>giveaway pause <id>` - Pause/unpause giveaway\n`>giveaway delete <id>` - Delete giveaway",
-                inline=False
-            )
-        
-        elif category == "setup":
-            embed = discord.Embed(
-                title="Server Setup Commands",
-                description="Configure welcome, leave, and boost messages",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-            embed.add_field(
-                name="Commands",
-                value="`>welcome setup` - Configure welcome messages\n`>leave setup` - Configure leave messages\n`>boost setup` - Configure boost messages\n`>autorole setup` - Configure auto roles\n`>logs setup` - Configure logging system",
-                inline=False
-            )
-        
-        elif category == "automod":
-            embed = discord.Embed(
-                title="AutoMod Commands",
-                description="Automatic moderation and filtering",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-            embed.add_field(
-                name="Commands",
-                value="`>automod setup` - Configure AutoMod\n`>automod config` - View AutoMod settings\n`>automod logs <channel>` - Set AutoMod logs\n`>automod enable <filter>` - Enable filter\n`>automod disable <filter>` - Disable filter\n`>autoresponder add` - Add auto response",
-                inline=False
-            )
-        
-        elif category == "info":
-            embed = discord.Embed(
-                title="Information Commands",
-                description="Get information about server and bot",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-            embed.add_field(
-                name="Commands",
-                value="`>serverinfo` - Server information\n`>userinfo <user>` - User information\n`>botinfo` - Bot information and stats\n`>support` - Get support links\n`>stats` - Bot statistics\n`>ping` - Bot latency",
-                inline=False
-            )
-        
-        elif category == "embeds":
-            embed = discord.Embed(
-                title="Embed Builder Commands",
-                description="Create custom embeds with variables",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-            embed.add_field(
-                name="Commands",
-                value="`>embed setup` - Create custom embed\n`>embed list` - View saved embeds\n`>embed edit <name>` - Edit existing embed\n`>embed delete <name>` - Delete saved embed\n\n**Variables:** `{user}`, `{server}`, `{member_count}`, `{date}`",
+                name="AutoMod System",
+                value="`/automod setup` - Configure auto moderation\n`/automod logs` - Set logging channel",
                 inline=False
             )
         
         elif category == "music":
-            embed = discord.Embed(
-                title="Music Player Commands",
-                description="Play music from YouTube, Spotify, and SoundCloud",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            embed.title = "🎵 Music Commands"
+            embed.description = "High-quality music streaming from multiple platforms"
             embed.add_field(
-                name="Commands",
-                value="`>play <song/url>` - Play music or add to queue\n`>skip` - Skip current track\n`>stop` - Stop music and clear queue\n`>disconnect` - Disconnect from voice\n`>247 enable/disable` - 24/7 mode (Premium)\n`>queue` - View current queue\n`>volume <1-100>` - Adjust volume\n`>musicpanel` or `>mp` - Music control panel\n`>voicepanel` or `>vp` - Voice control panel\n`>mhelp` - Detailed music help\n\n**Features:** Interactive player, autoplay, shuffle, 24/7 mode",
+                name="Playback Controls",
+                value="`/play <song>` - Play music\n`/skip` - Skip current track\n`/stop` - Stop playback\n`/queue` - View queue",
+                inline=False
+            )
+            embed.add_field(
+                name="Premium Features",
+                value="`/247 enable` - 24/7 mode\n`/node switch` - Change music source",
+                inline=False
+            )
+        
+        elif category == "tickets":
+            embed.title = "🎫 Ticket Commands"
+            embed.description = "Professional support ticket management system"
+            embed.add_field(
+                name="Ticket Management",
+                value="`/ticket setup` - Configure tickets\n`/ticket close` - Close ticket\n`/ticket logs` - Set logs channel",
+                inline=False
+            )
+        
+        elif category == "reactions":
+            embed.title = "⚡ Reaction Role Commands"
+            embed.description = "Automated role assignment with emoji reactions"
+            embed.add_field(
+                name="Reaction Roles",
+                value="`/reaction role setup` - Create reaction roles\n`/reaction role list` - View all setups\n`/reaction role reset` - Reset configuration",
+                inline=False
+            )
+        
+        elif category == "verification":
+            embed.title = "🔐 Verification Commands"
+            embed.description = "Server verification and member screening system"
+            embed.add_field(
+                name="Verification System",
+                value="`/verify setup` - Configure verification\n`/verify reset` - Reset verification",
+                inline=False
+            )
+        
+        elif category == "embeds":
+            embed.title = "📝 Embed Commands"
+            embed.description = "Create beautiful custom embeds for your server"
+            embed.add_field(
+                name="Embed Management",
+                value="`/embed setup` - Create custom embed\n`/embed list` - View saved embeds\n`/embed delete` - Delete embeds",
                 inline=False
             )
         
         elif category == "fun":
-            embed = discord.Embed(
-                title="Fun Commands",
-                description="Interactive fun commands with anime GIFs",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            embed.title = "🎮 Fun Commands"
+            embed.description = "Entertainment and interactive commands for your community"
             embed.add_field(
-                name="Commands",
-                value="`>kiss <user>` - Kiss someone with a cute anime GIF\n`>slap <user>` - Slap someone with an anime GIF\n`>kill <user>` - Playfully eliminate someone with a funny GIF\n`>hug <user>` - Give someone a warm hug\n\n**Features:** Random GIFs, different animations every time!",
+                name="Interactive Commands",
+                value="`/meme` - Get random memes\n`/kiss <user>` - Kiss someone\n`/hug <user>` - Hug someone\n`/slap <user>` - Slap someone",
                 inline=False
             )
         
         elif category == "utility":
-            embed = discord.Embed(
-                title="Utility Commands",
-                description="Helpful utility and configuration commands",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            embed.title = "🔧 Utility Commands"
+            embed.description = "Helpful tools and server information commands"
             embed.add_field(
-                name="Commands",
-                value="`>prefix set <prefix>` - Change bot prefix\n`>prefix reset` - Reset to default prefix\n`>purge <amount>` - Delete messages\n`>ping` - Bot latency and status\n`>uptime` - Bot uptime\n`>users` - Global bot stats\n`>invite` - Get bot invite link",
+                name="Information",
+                value="`/serverinfo` - Server details\n`/userinfo` - User information\n`/botinfo` - Bot statistics\n`/ping` - Bot latency",
+                inline=False
+            )
+            embed.add_field(
+                name="User Tools",
+                value="`/afk <reason>` - Set AFK status\n`/premium` - Check premium status",
+                inline=False
+            )
+            embed.add_field(
+                name="Profile System",
+                value="`/avatar <user>` - Get user avatar\n`/banner <user>` - Get user banner\n`/profile <user>` - View user profile",
+                inline=False
+            )
+        
+        elif category == "admin":
+            embed.title = "👑 Admin Commands"
+            embed.description = "Server administration and management tools"
+            embed.add_field(
+                name="Server Management",
+                value="`/extraowner set <user>` - Add extra owner\n`/extraowner remove <user>` - Remove extra owner\n`/extraowner list` - List extra owners",
+                inline=False
+            )
+            embed.add_field(
+                name="Configuration",
+                value="`/prefix set <prefix>` - Change bot prefix\n`/botadmin add <user>` - Add bot admin\n`/botadmin remove <user>` - Remove bot admin",
+                inline=False
+            )
+        
+        elif category == "welcome":
+            embed.title = "🏠 Welcome Commands"
+            embed.description = "Welcome and leave message system"
+            embed.add_field(
+                name="Welcome System",
+                value="`/welcome setup` - Setup welcome messages\n`/welcome test` - Test welcome message\n`/welcome reset` - Reset configuration\n`/welcome config` - View current settings",
+                inline=False
+            )
+            embed.add_field(
+                name="Leave System",
+                value="`/leave setup` - Setup leave messages\n`/leave test` - Test leave message\n`/leave reset` - Reset leave config",
+                inline=False
+            )
+        
+        elif category == "giveaways":
+            embed.title = "🎁 Giveaway Commands"
+            embed.description = "Complete giveaway management system"
+            embed.add_field(
+                name="Giveaway Management",
+                value="`/giveaway start` - Start a giveaway\n`/giveaway end` - End a giveaway\n`/giveaway reroll` - Reroll winners\n`/giveaway list` - List active giveaways",
+                inline=False
+            )
+        
+        elif category == "stats":
+            embed.title = "📊 Stats Commands"
+            embed.description = "Server statistics and analytics"
+            embed.add_field(
+                name="Statistics",
+                value="`/stats server` - Server statistics\n`/stats user <user>` - User statistics\n`/stats bot` - Bot statistics",
+                inline=False
+            )
+        
+        elif category == "premium":
+            embed.title = "💎 Premium Commands"
+            embed.description = "Premium features and benefits"
+            embed.add_field(
+                name="Premium System",
+                value="`/premium` - Check premium status\n`/premium activate` - Activate premium\n`/premium features` - View premium features",
+                inline=False
+            )
+        
+        elif category == "automod":
+            embed.title = "🔄 AutoMod Commands"
+            embed.description = "Advanced automatic moderation system"
+            embed.add_field(
+                name="AutoMod Setup",
+                value="`/automod setup` - Configure automod\n`/automod logs <channel>` - Set logs channel\n`/automod toggle <rule>` - Toggle rules",
+                inline=False
+            )
+        
+        elif category == "logs":
+            embed.title = "📢 Logs Commands"
+            embed.description = "Server logging and monitoring system"
+            embed.add_field(
+                name="Logging System",
+                value="`/logs setup` - Setup logging\n`/logs channel <type> <channel>` - Set log channels\n`/logs toggle <type>` - Toggle log types",
+                inline=False
+            )
+        
+        elif category == "boost":
+            embed.title = "🚀 Boost Commands"
+            embed.description = "Server boost rewards and management"
+            embed.add_field(
+                name="Boost System",
+                value="`/boost setup` - Setup boost rewards\n`/boost role <role>` - Set boost role\n`/boost message` - Set boost message",
+                inline=False
+            )
+        
+        elif category == "voice":
+            embed.title = "📱 Voice Panel Commands"
+            embed.description = "Voice channel management and controls"
+            embed.add_field(
+                name="Voice Controls",
+                value="`/voicepanel` - Create voice panel\n`/voice lock` - Lock voice channel\n`/voice unlock` - Unlock voice channel",
+                inline=False
+            )
+        
+        elif category == "musicpanel":
+            embed.title = "🎶 Music Panel Commands"
+            embed.description = "Interactive music control panel"
+            embed.add_field(
+                name="Music Panel",
+                value="`/musicpanel` - Create music panel\n`/nowplaying` - Show current song\n`/queue panel` - Queue management panel",
+                inline=False
+            )
+        
+        elif category == "afk":
+            embed.title = "💤 AFK Commands"
+            embed.description = "Away from keyboard status system"
+            embed.add_field(
+                name="AFK System",
+                value="`/afk <reason>` - Set AFK status\n`/afk global <reason>` - Set global AFK\n`/afk remove` - Remove AFK status",
                 inline=False
             )
         
         elif category == "invites":
-            embed = discord.Embed(
-                title="Invite Tracking Commands",
-                description="Track and manage server invites",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+            embed.title = "📨 Invite Commands"
+            embed.description = "Invite tracking and management system"
             embed.add_field(
-                name="Commands",
-                value="`/invitesetup` - Configure invite logging\n`/invites <user>` - Check user invite stats\n`/inviteboard` - View invite leaderboard\n`/invites add <user> <amount>` - Add bonus invites\n`/invites remove <user> <amount>` - Remove invites\n`/invites clear <user>` - Reset user invites\n`/invites resetall` - Reset all server invites",
+                name="Invite Tracking",
+                value="`/invites <user>` - Check user invites\n`/invites leaderboard` - Invite leaderboard\n`/invites add <user> <amount>` - Add bonus invites",
                 inline=False
             )
         
-        elif category == "basic_mod":
-            embed = discord.Embed(
-                title="Basic Moderation Commands",
-                description="Essential moderation commands with DM notifications",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+        elif category == "autorole":
+            embed.title = "🎯 AutoRole Commands"
+            embed.description = "Automatic role assignment system"
             embed.add_field(
-                name="Commands",
-                value="`/kick <user> [reason]` - Kick a member\n`/ban <user> [reason]` - Ban a member\n`/mute <user> <time> [reason]` - Mute a member\n`/tempmute <user> <time> [reason]` - Temporarily mute\n\n**Time Format:** 1h, 30m, 2d (hours, minutes, days)\n**Features:** Automatic DM notifications to users",
+                name="AutoRole System",
+                value="`/autorole setup` - Setup auto roles\n`/autorole add <role>` - Add auto role\n`/autorole remove <role>` - Remove auto role",
                 inline=False
             )
         
-        elif category == "media":
-            embed = discord.Embed(
-                title="Media Filter Commands",
-                description="Manage media-only channels and bypass roles",
-                color=0x808080
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+        elif category == "autorule":
+            embed.title = "⚙️ AutoRule Commands"
+            embed.description = "Automatic server rules and enforcement"
             embed.add_field(
-                name="Channel Management",
-                value="`>media channel add <channel>` - Add media-only channel\n`>media channel remove <channel>` - Remove media channel\n`>media channel list` - View all media channels\n`>media channel reset` - Clear all media channels",
-                inline=False
-            )
-            embed.add_field(
-                name="Bypass Management",
-                value="`>media bypass add <role>` - Add bypass role\n`>media bypass remove <role>` - Remove bypass role\n`>media bypass list` - View all bypass roles\n`>media bypass reset` - Clear all bypass roles",
+                name="AutoRule System",
+                value="`/autorule setup` - Setup auto rules\n`/autorule add <rule>` - Add new rule\n`/autorule list` - List all rules",
                 inline=False
             )
         
-        embed = add_dravon_footer(embed)
+        elif category == "teams":
+            embed.title = "🏆 Team Commands"
+            embed.description = "Team management and organization system"
+            embed.add_field(
+                name="Team Management",
+                value="`/team create <name>` - Create team\n`/team join <team>` - Join team\n`/team leave` - Leave current team",
+                inline=False
+            )
+        
+        elif category == "levelup":
+            embed.title = "📈 Level Up Commands"
+            embed.description = "Leveling and XP progression system"
+            embed.add_field(
+                name="Leveling System",
+                value="`/level` - Check your level\n`/level <user>` - Check user level\n`/leaderboard` - View level leaderboard",
+                inline=False
+            )
+        
         view = HelpView(self.bot)
         await interaction.response.edit_message(embed=embed, view=view)
+    
+    @discord.ui.button(label="🔗 Invite", style=discord.ButtonStyle.link, url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot", row=1)
+    async def invite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+    
+    @discord.ui.button(label="🛠️ Support", style=discord.ButtonStyle.link, url="https://discord.gg/UKR78VcEtg", row=1)
+    async def support_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
 
 class Help(commands.Cog):
     def __init__(self, bot):
@@ -228,78 +325,16 @@ class Help(commands.Cog):
     @commands.hybrid_command(name="help")
     async def help_command(self, ctx):
         """Display bot help with categories"""
-        
-        # Loading animation
-        loading_embed = discord.Embed(
-            title="⏳ Loading Help command...",
-            description="Please wait while we prepare the help menu...",
-            color=0x808080
-        )
-        loading_embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
-        
-        loading_msg = await ctx.send(embed=loading_embed)
-        await asyncio.sleep(1)
-        
         embed = discord.Embed(
-            title="Dravon Help Center",
-            description="**Your all-in-one Discord server management solution**\n\nSelect a category from the dropdown below to view commands!",
-            color=0x808080
+            title="🤖 Dravon Bot - Help Center",
+            description="**Welcome to Dravon!** Your all-in-one Discord server management solution.\n\n🛡️ **Advanced Security** - AntiNuke & AutoMod protection\n🎵 **Premium Music** - Multi-platform streaming\n⚡ **Reaction Roles** - Automated role management\n🔐 **Verification** - Member screening system\n\n*Select a category from the dropdown below to explore commands!*",
+            color=0x7289da
         )
         embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-        embed = add_dravon_footer(embed)
+        embed.set_footer(text="Dravon™ • Advanced Discord Server Management", icon_url=self.bot.user.display_avatar.url)
         
-        # Create main view with navigation and dropdown
-        view = discord.ui.View(timeout=300)
-        
-        # Navigation buttons in first row
-        back_btn = discord.ui.Button(
-            emoji="⏪",
-            style=discord.ButtonStyle.secondary,
-            custom_id="help_back",
-            row=0
-        )
-        
-        forward_btn = discord.ui.Button(
-            emoji="⏩",
-            style=discord.ButtonStyle.secondary,
-            custom_id="help_forward",
-            row=0
-        )
-        
-        delete_btn = discord.ui.Button(
-            emoji="🗑️",
-            style=discord.ButtonStyle.danger,
-            custom_id="help_delete",
-            row=0
-        )
-        
-        view.add_item(back_btn)
-        view.add_item(forward_btn)
-        view.add_item(delete_btn)
-        
-        # Add the help dropdown
-        help_view = HelpView(self.bot)
-        view.add_item(help_view.children[0])  # Add the select menu
-        
-        # Add Invite and Support buttons in one row
-        invite_btn = discord.ui.Button(
-            label="Invite",
-            style=discord.ButtonStyle.link,
-            url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot",
-            emoji="🔗"
-        )
-        
-        support_btn = discord.ui.Button(
-            label="Support",
-            style=discord.ButtonStyle.link,
-            url="https://discord.gg/UKR78VcEtg",
-            emoji="🛠️"
-        )
-        
-        view.add_item(invite_btn)
-        view.add_item(support_btn)
-        
-        await loading_msg.edit(embed=embed, view=view)
+        view = HelpView(self.bot)
+        await ctx.send(embed=embed, view=view)
 
 async def setup(bot):
     await bot.add_cog(Help(bot))

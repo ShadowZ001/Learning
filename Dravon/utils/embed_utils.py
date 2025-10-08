@@ -1,19 +1,27 @@
 import discord
 
-def add_dravon_footer(embed: discord.Embed) -> discord.Embed:
-    """Add 'Powered by Dravon™' footer to any embed"""
-    current_footer = embed.footer.text if embed.footer else ""
-    
-    if current_footer:
-        # If there's already a footer, add Dravon branding with separator
-        embed.set_footer(text=f"{current_footer} • Powered by Dravon™")
+def add_dravon_footer(embed, help_only=False):
+    """Add Dravon footer to embed"""
+    if help_only:
+        embed.set_footer(text="Powered by Dravon™ • Use >help for commands")
     else:
-        # If no footer, just add Dravon branding
-        embed.set_footer(text="Powered by Dravon™")
-    
+        embed.set_footer(text="Powered by Dravon™ • Advanced Discord Bot")
     return embed
 
-def create_embed(title: str = None, description: str = None, color: int = 0x7289da) -> discord.Embed:
-    """Create an embed with Dravon branding automatically added"""
-    embed = discord.Embed(title=title, description=description, color=color)
+def create_error_embed(title, description):
+    """Create error embed"""
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=0xff0000
+    )
+    return add_dravon_footer(embed)
+
+def create_success_embed(title, description):
+    """Create success embed"""
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=0x00ff00
+    )
     return add_dravon_footer(embed)

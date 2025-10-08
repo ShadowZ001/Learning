@@ -162,6 +162,14 @@ class UserInfo(commands.Cog):
         # Set user avatar as thumbnail and try to get banner
         embed.set_thumbnail(url=user.display_avatar.url)
         
+        # Set custom status for bot owner
+        if user.id == 1037768611126841405:  # Shadow's ID
+            embed.add_field(
+                name="__Special Status__",
+                value="shadow >3",
+                inline=False
+            )
+        
         # Try to fetch user banner
         try:
             fetched_user = await self.bot.fetch_user(user.id)

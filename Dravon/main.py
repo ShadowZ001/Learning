@@ -13,6 +13,7 @@ class DravonBot(commands.Bot):
         intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
+        intents.reactions = True
         
         super().__init__(
             command_prefix=self.get_prefix,
@@ -35,47 +36,34 @@ class DravonBot(commands.Bot):
         return custom_prefix or ">"
     
     async def setup_hook(self):
-        await self.load_extension('cogs.welcome')
-        await self.load_extension('cogs.prefix')
-        await self.load_extension('cogs.autoresponder')
-        await self.load_extension('cogs.serverinfo')
-        await self.load_extension('cogs.autorule')
-        await self.load_extension('cogs.stats')
-        await self.load_extension('cogs.autorole')
-        await self.load_extension('cogs.purge')
-        await self.load_extension('cogs.moderation')
-        await self.load_extension('cogs.automod_advanced')
-        await self.load_extension('cogs.antinuke_advanced')
-        await self.load_extension('cogs.logs')
-        await self.load_extension('cogs.giveaway')
-        await self.load_extension('cogs.boost')
-        await self.load_extension('cogs.leave')
-        await self.load_extension('cogs.ticket')
-        await self.load_extension('cogs.embed')
-        await self.load_extension('cogs.botinfo')
-        await self.load_extension('cogs.help')
-        await self.load_extension('cogs.music')
-        await self.load_extension('cogs.premium')
-        await self.load_extension('cogs.userinfo')
-        await self.load_extension('cogs.teams')
-        await self.load_extension('cogs.levelup')
-        await self.load_extension('cogs.afk')
-        await self.load_extension('cogs.whitelist')
-        await self.load_extension('cogs.docs')
-        await self.load_extension('cogs.botadmin')
-        await self.load_extension('cogs.mention')
-        await self.load_extension('cogs.emoji')
-        await self.load_extension('cogs.fun')
-        await self.load_extension('cogs.interactions')
-        await self.load_extension('cogs.admin')
-        await self.load_extension('cogs.whitelist_system')
-        await self.load_extension('cogs.uptime')
-        await self.load_extension('cogs.users')
-        await self.load_extension('cogs.invites')
-        await self.load_extension('cogs.basic_moderation')
-        await self.load_extension('cogs.ping')
-        await self.load_extension('cogs.media')
-        await self.load_extension('cogs.music_panel')
+        # Load all existing cogs
+        cogs = [
+            'cogs.welcome', 'cogs.prefix', 'cogs.autoresponder', 'cogs.serverinfo',
+            'cogs.stats', 'cogs.autorole', 'cogs.purge',
+            'cogs.automod_advanced', 'cogs.antinuke',
+            'cogs.logs', 'cogs.giveaway', 'cogs.boost', 'cogs.leave',
+            'cogs.ticket', 'cogs.embed', 'cogs.botinfo', 'cogs.help_new',
+            'cogs.music', 'cogs.premium', 'cogs.userinfo', 'cogs.teams',
+            'cogs.levelup', 'cogs.afk', 'cogs.whitelist', 'cogs.docs',
+            'cogs.botadmin', 'cogs.mention', 'cogs.emoji', 'cogs.fun', 'cogs.badge', 'cogs.youtube', 'cogs.admin_panel',
+            'cogs.interactions', 'cogs.whitelist_system',
+            'cogs.uptime', 'cogs.users', 'cogs.invites',
+            'cogs.ping', 'cogs.media', 'cogs.voice_panel',
+            'cogs.music_panel', 'cogs.extraowner', 'cogs.meme', 'cogs.verify',
+            'cogs.reactionrole', 'cogs.userprofile', 'cogs.moderation_new',
+            'cogs.maintenance', 'cogs.ai_chat', 'cogs.messages', 'cogs.vote', 'cogs.rps', 'cogs.autorule', 'cogs.apply'
+        ]
+        
+        loaded = 0
+        for cog in cogs:
+            try:
+                await self.load_extension(cog)
+                loaded += 1
+                print(f"✅ Loaded {cog}")
+            except Exception as e:
+                print(f"❌ Failed to load {cog}: {e}")
+        
+        print(f"✅ Loaded {loaded} cogs total")
 
         try:
             synced = await self.tree.sync()
@@ -118,7 +106,8 @@ class DravonBot(commands.Bot):
         statuses = [
             "shadow >3",
             f"currently {len(self.guilds)} servers",
-            "Try >help"
+            "Try >help",
+            ">help | >support"
         ]
         
         while not self.is_closed():
@@ -134,231 +123,149 @@ class DravonBot(commands.Bot):
         if message.author.bot:
             return
         
-        # Check if user is blacklisted
-        botadmin_cog = self.get_cog('BotAdmin')
-        if botadmin_cog and botadmin_cog.is_blacklisted(message.author.id):
-            return
+        # Skip blacklist check for now
+        # botadmin_cog = self.get_cog('BotAdmin')
+        # if botadmin_cog and botadmin_cog.is_blacklisted(message.author.id):
+        #     return
         
-        # Command suggestion for wrong commands (only with prefix)
+        # Enhanced command suggestions
         if message.guild and message.content.startswith('>'):
             ctx = await self.get_context(message)
             if ctx.command is None and len(message.content) > 1:
                 # Extract the attempted command
                 attempted_command = message.content[1:].split()[0].lower()
                 
-                # Enhanced command suggestions
+                # Expanded command suggestions
                 suggestions = {
-                    'help': ['help', 'h', 'commands'],
-                    'serverinfo': ['serverinfo', 'si', 'server', 'guild'],
-                    'userinfo': ['userinfo', 'ui', 'user', 'profile'],
-                    'botinfo': ['botinfo', 'bi', 'bot', 'info'],
-                    'play': ['play', 'p', 'music', 'song'],
-                    'premium': ['premium', 'prem', 'vip'],
-                    'antinuke': ['antinuke', 'anti', 'security', 'protection'],
-                    'automod': ['automod', 'auto', 'mod', 'moderation'],
-                    'invites': ['invites', 'invite', 'inv', 'i'],
-                    'ping': ['ping', 'latency', 'pong'],
-                    'kick': ['kick', 'remove'],
-                    'ban': ['ban', 'banish'],
-                    'mute': ['mute', 'timeout', 'silence'],
-                    '247': ['247', '24/7', 'stay', 'alwayson']
+                    'help': ['help', 'h', 'commands', 'cmd', 'command', 'cmds'],
+                    'serverinfo': ['serverinfo', 'si', 'server', 'guild', 'sinfo', 'guildinfo', 'serverstats'],
+                    'userinfo': ['userinfo', 'ui', 'user', 'profile', 'uinfo', 'whois', 'info'],
+                    'botinfo': ['botinfo', 'bi', 'bot', 'info', 'binfo', 'about', 'stats'],
+                    'play': ['play', 'p', 'music', 'song', 'mp3', 'youtube', 'yt', 'spotify'],
+                    'premium': ['premium', 'prem', 'vip', 'pro', 'upgrade'],
+                    'antinuke': ['antinuke', 'anti', 'security', 'protection', 'nuke', 'secure', 'safety'],
+                    'automod': ['automod', 'auto', 'mod', 'moderation', 'amod', 'filter', 'automoderation'],
+                    'invites': ['invites', 'invite', 'inv', 'i', 'invs', 'invitations'],
+                    'ping': ['ping', 'latency', 'pong', 'lag', 'ms', 'speed'],
+                    'kick': ['kick', 'remove', 'boot', 'eject'],
+                    'ban': ['ban', 'banish', 'block', 'hammer'],
+                    'mute': ['mute', 'timeout', 'silence', 'quiet', 'shush'],
+                    'warn': ['warn', 'warning', 'caution', 'alert'],
+                    'purge': ['purge', 'clear', 'delete', 'clean', 'prune'],
+                    'voicepanel': ['voicepanel', 'vp', 'voice', 'vc', 'vpanel'],
+                    'musicpanel': ['musicpanel', 'mp', 'music', 'mpanel'],
+
+                    'ticket': ['ticket', 'support', 'tickets', 'tkt'],
+                    'giveaway': ['giveaway', 'gw', 'give', 'contest', 'raffle'],
+                    'embed': ['embed', 'announcement', 'message', 'rich'],
+                    'welcome': ['welcome', 'greet', 'greeting', 'join'],
+                    'roleadd': ['roleadd', 'addrole', 'giverole', 'role'],
+                    'avatar': ['avatar', 'av', 'pfp', 'picture', 'pic'],
+                    'banner': ['banner', 'bn', 'cover'],
+                    'profile': ['profile', 'pr', 'bio', 'about']
                 }
                 
-                # Find closest match
-                found_suggestion = False
+                # Find best match with fuzzy matching
+                best_match = None
+                best_score = 0
+                
                 for cmd, aliases in suggestions.items():
-                    if attempted_command in aliases or any(attempted_command.startswith(alias) for alias in aliases):
-                        embed = discord.Embed(
-                            title="❓ Did you mean?",
-                            description=f"Command `{attempted_command}` not found.\n\n**Did you mean:** `>{cmd}`?",
-                            color=0x808080
-                        )
-                        embed.set_footer(text="Tip: Check spelling and try again")
-                        await message.channel.send(embed=embed, delete_after=6)
-                        found_suggestion = True
+                    for alias in aliases:
+                        # Exact match
+                        if attempted_command == alias:
+                            best_match = cmd
+                            best_score = 100
+                            break
+                        # Starts with match
+                        elif attempted_command.startswith(alias) or alias.startswith(attempted_command):
+                            score = len(attempted_command) / len(alias) * 80
+                            if score > best_score:
+                                best_match = cmd
+                                best_score = score
+                        # Contains match
+                        elif attempted_command in alias or alias in attempted_command:
+                            score = 60
+                            if score > best_score:
+                                best_match = cmd
+                                best_score = score
+                    if best_score == 100:
                         break
                 
-                # Generic suggestion for completely unknown commands
-                if not found_suggestion and len(attempted_command) > 2:
+                if best_match and best_score > 50:
                     embed = discord.Embed(
-                        title="❓ Unknown Command",
-                        description=f"Command `{attempted_command}` not found.\n\n**Try these instead:**\n• `>help` - View all commands\n• `>musicpanel` or `>mp` - Music controls\n• `>voicepanel` or `>vp` - Voice controls",
-                        color=0x808080
+                        title="💡 Command Suggestion",
+                        description=f"Did you mean `>{best_match}`?\n\n*Tip: Use `>help` to see all available commands!*",
+                        color=0x7289da
                     )
-                    embed.set_footer(text="Tip: Use >help to see all available commands")
+                    embed.set_thumbnail(url=self.user.display_avatar.url)
+                    embed.set_footer(text="Dravon™ Smart Suggestions", icon_url=self.user.display_avatar.url)
                     await message.channel.send(embed=embed, delete_after=8)
+                elif len(attempted_command) > 2:
+                    # Show helpful message for unknown commands
+                    embed = discord.Embed(
+                        title="❓ Command Not Found",
+                        description=f"Command `{attempted_command}` not found.\n\n**Quick Help:**\n• Use `>help` to see all commands\n• Try `>botinfo` for bot information\n• Need support? Use `>support`",
+                        color=0xff8c00
+                    )
+                    embed.set_thumbnail(url=self.user.display_avatar.url)
+                    embed.set_footer(text="Need help? Join our support server!", icon_url=self.user.display_avatar.url)
+                    await message.channel.send(embed=embed, delete_after=10)
         
-        # Bot mention response
-        if message.guild and (f'<@{self.user.id}>' in message.content or f'<@!{self.user.id}>' in message.content):
-            prefix = await self.get_prefix(message)
-            
-            embed = discord.Embed(
-                title=f"{self.user.name}",
-                description=f"My prefix is `{prefix}`\n\nUse `{prefix}help` to see all my commands!",
-                color=0x808080
-            )
-            embed.set_author(name="Dravon", icon_url=self.user.display_avatar.url)
-            embed.set_thumbnail(url=self.user.display_avatar.url)
-            
-            view = discord.ui.View(timeout=300)
-            
-            invite_btn = discord.ui.Button(
-                label="Invite",
-                style=discord.ButtonStyle.link,
-                url="https://discord.com/oauth2/authorize?client_id=1412942933405208668&permissions=8&integration_type=0&scope=bot",
-                emoji="🔗"
-            )
-            
-            support_btn = discord.ui.Button(
-                label="Support",
-                style=discord.ButtonStyle.link,
-                url="https://discord.gg/UKR78VcEtg",
-                emoji="🛠️"
-            )
-            
-            view.add_item(invite_btn)
-            view.add_item(support_btn)
-            
-            await message.channel.send(embed=embed, view=view)
-            return
-        
-        # ULTRA STRICT no-prefix system EXCLUSIVELY for premium users and guilds
+        # No-prefix system for PREMIUM users only
         if message.guild and not message.content.startswith(('>', '/', '<@', '!', '?', '.', '-', '+', '=')):
             premium_cog = self.get_cog('Premium')
             if not premium_cog:
-                return  # No premium cog, no no-prefix
+                return
             
             user_premium = await premium_cog.is_premium(message.author.id)
             guild_premium = await premium_cog.is_premium_guild(message.guild.id)
             
-            # ULTRA STRICT: Absolutely NO no-prefix for non-premium users
-            if not user_premium and not guild_premium:
-                return  # Immediately exit for non-premium users
+            if not (user_premium or guild_premium):
+                return
             
-            # Double check premium status
-            if user_premium or guild_premium:
-                    content_stripped = message.content.strip()
-                    words = content_stripped.split()
+            content_stripped = message.content.strip()
+            words = content_stripped.split()
+            
+            if words and len(words[0]) >= 1:
+                first_word = words[0].lower()
+                
+                if first_word and first_word[0].isalpha() and 1 <= len(first_word) <= 20:
+                    # Get all commands
+                    all_commands = set()
                     
-                    if words and len(words[0]) >= 1:  # Allow single characters for short commands
-                        first_word = words[0].lower()
-                        
-                        # Check if starts with letter and is reasonable length
-                        if first_word and first_word[0].isalpha() and 1 <= len(first_word) <= 20:
-                            # Comprehensive command list (case-insensitive)
-                            all_commands = set()
-                            
-                            # Get all registered commands dynamically
-                            for command in self.commands:
-                                all_commands.add(command.name.lower())
-                                if hasattr(command, 'aliases') and command.aliases:
-                                    for alias in command.aliases:
-                                        all_commands.add(alias.lower())
-                            
-                            # Get commands from all cogs
-                            for cog in self.cogs.values():
-                                for command in cog.get_commands():
-                                    all_commands.add(command.name.lower())
-                                    if hasattr(command, 'aliases') and command.aliases:
-                                        for alias in command.aliases:
-                                            all_commands.add(alias.lower())
-                                    
-                                    # Handle group commands
-                                    if hasattr(command, 'commands'):
-                                        for subcommand in command.commands:
-                                            all_commands.add(f"{command.name.lower()} {subcommand.name.lower()}")
-                            
-                            # Static command list for reliability (case-insensitive)
-                            static_commands = {
-                                'help', 'mhelp', 'h', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
-                                'ping', 'support', 'partnership', 'docs', 'invite', 'invites', 'i', 'stats',
-                                'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue', 'q', 'volume',
-                                'shuffle', 'clear', 'nowplaying', 'np', 'loop', 'autoplay', 'music',
-                                'ban', 'unban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge',
-                                'timeout', 'untimeout', 'slowmode', 'lock', 'unlock', 'role', 'nick',
-                                'avatar', 'banner', 'color', 'members', 'moderation',
-                                'welcome', 'leave', 'boost', 'autorole', 'automod', 'antinuke',
-                                'ticket', 'embed', 'logs', 'prefix', 'giveaway', 'setup',
-                                'premium', 'mode', 'activate', 'vip', 'exclusive',
-                                'kiss', 'slap', 'kill', 'hug', 'pat', 'poke', 'fun',
-                                'afk', 'level', 'rank', 'leaderboard', 'levelup',
-                                'whitelist', 'blacklist', 'config', 'reset', 'enable', 'disable',
-                                'admin', 'announce', 'add', 'remove', 'list', 'show', 'view',
-                                'uptime', 'users', 'disconnect', 'tempmute'
-                            }
-                            
-                            all_commands.update(static_commands)
-                            
-                            # Enhanced case-insensitive command matching
-                            command_found = False
-                            matched_command = None
-                            
-                            # Strategy 1: Direct exact match (case-insensitive)
-                            if first_word in all_commands:
-                                command_found = True
-                                matched_command = first_word
-                            
-                            # Strategy 2: Group commands (case-insensitive)
-                            elif len(words) >= 2:
-                                two_word_cmd = f"{first_word} {words[1].lower()}"
-                                if any(two_word_cmd == cmd for cmd in all_commands):
-                                    command_found = True
-                                    matched_command = two_word_cmd
-                                elif first_word in ['antinuke', 'automod', 'premium', 'ticket', 'welcome'] and words[1].lower() in ['setup', 'config', 'show', 'add', 'remove']:
-                                    command_found = True
-                                    matched_command = two_word_cmd
-                            
-                            # Strategy 3: Case-insensitive pattern matching
-                            if not command_found:
-                                # Check all commands with case-insensitive matching
-                                for cmd in all_commands:
-                                    if cmd.lower() == first_word:
-                                        command_found = True
-                                        matched_command = cmd
-                                        break
-                                
-                                # Special handling for common command variations
-                                if not command_found:
-                                    command_variations = {
-                                        'help': first_word in ['help', 'h', 'Help', 'HELP', 'Help'],
-                                        'botinfo': first_word in ['botinfo', 'bi', 'Botinfo', 'BOTINFO', 'BotInfo'],
-                                        'serverinfo': first_word in ['serverinfo', 'si', 'Serverinfo', 'SERVERINFO', 'ServerInfo'],
-                                        'userinfo': first_word in ['userinfo', 'ui', 'Userinfo', 'USERINFO', 'UserInfo'],
-                                        'antinuke': first_word in ['antinuke', 'anti', 'Antinuke', 'ANTINUKE', 'AntiNuke'],
-                                        'automod': first_word in ['automod', 'auto', 'Automod', 'AUTOMOD', 'AutoMod'],
-                                        'premium': first_word in ['premium', 'prem', 'Premium', 'PREMIUM'],
-                                        'invites': first_word in ['invites', 'invite', 'i', 'Invites', 'INVITES', 'Invite', 'I']
-                                    }
-                                    
-                                    for base_cmd, matches in command_variations.items():
-                                        if matches:
-                                            command_found = True
-                                            matched_command = base_cmd
-                                            break
-                            
-                            if command_found:
-                                # FINAL PREMIUM CHECK before allowing no-prefix
-                                final_user_premium = await premium_cog.is_premium(message.author.id)
-                                final_guild_premium = await premium_cog.is_premium_guild(message.guild.id)
-                                
-                                if not (final_user_premium or final_guild_premium):
-                                    return  # Block non-premium users completely
-                                
-                                prefix = await self.get_prefix(message)
-                                # Use the matched command to ensure proper case
-                                if matched_command and ' ' in matched_command:
-                                    # For group commands
-                                    remaining_words = ' '.join(words[2:]) if len(words) > 2 else ''
-                                    message.content = f"{prefix}{matched_command} {remaining_words}".strip()
-                                else:
-                                    # For single commands
-                                    remaining_words = ' '.join(words[1:]) if len(words) > 1 else ''
-                                    message.content = f"{prefix}{matched_command or first_word} {remaining_words}".strip()
+                    for command in self.commands:
+                        all_commands.add(command.name.lower())
+                        if hasattr(command, 'aliases') and command.aliases:
+                            for alias in command.aliases:
+                                all_commands.add(alias.lower())
+                    
+                    for cog in self.cogs.values():
+                        for command in cog.get_commands():
+                            all_commands.add(command.name.lower())
+                            if hasattr(command, 'aliases') and command.aliases:
+                                for alias in command.aliases:
+                                    all_commands.add(alias.lower())
+                    
+                    # Static commands
+                    static_commands = {
+                        'help', 'serverinfo', 'si', 'userinfo', 'ui', 'botinfo', 'bi',
+                        'ping', 'play', 'p', 'skip', 'stop', 'pause', 'resume', 'queue',
+                        'ban', 'kick', 'mute', 'unmute', 'purge', 'antinuke', 'automod',
+                        'ticket', 'premium', 'voicepanel', 'vp', 'musicpanel', 'mp'
+                    }
+                    
+                    all_commands.update(static_commands)
+                    
+                    if first_word in all_commands:
+                        prefix = await self.get_prefix(message)
+                        remaining_words = ' '.join(words[1:]) if len(words) > 1 else ''
+                        message.content = f"{prefix}{first_word} {remaining_words}".strip()
         
         # Process emoji placeholders in message content
         if message.content and hasattr(self, 'emoji_handler'):
             message.content = self.emoji_handler.replace_emojis(message.content)
         
+        # Process commands
         await self.process_commands(message)
     
     async def send_guild_join_message(self, guild):
@@ -536,31 +443,11 @@ class DravonBot(commands.Bot):
         if len(self._processed_commands) > 100:
             self._processed_commands = set(list(self._processed_commands)[-50:])
         
-        # Apply cooldowns - ONLY premium users get no cooldowns
-        premium_cog = self.get_cog('Premium')
-        if premium_cog and message.guild:
-            user_premium = await premium_cog.is_premium(message.author.id)
-            guild_premium = await premium_cog.is_premium_guild(message.guild.id)
-            
-            # ONLY premium users/guilds get no cooldowns
-            if not (user_premium or guild_premium):
-                user_key = f"{message.author.id}_{ctx.command.name}"
-                current_time = time.time()
-                
-                if user_key in self.cooldowns:
-                    time_diff = current_time - self.cooldowns[user_key]
-                    if time_diff < 2.0:  # 2 second cooldown for non-premium
-                        remaining = 2.0 - time_diff
-                        embed = discord.Embed(
-                            title="⏰ Command Cooldown",
-                            description=f"Please wait **{remaining:.1f}s** before using this command again.\n\n💎 **Upgrade to Premium for no cooldowns!**\n🌟 **Premium guilds also have no cooldowns!**",
-                            color=0xff8c00
-                        )
-                        embed.set_footer(text="Premium users enjoy instant command access!", icon_url=self.user.display_avatar.url)
-                        await ctx.send(f"⏰ Please wait **{remaining:.1f}s** before using this command again. 💎 Upgrade to Premium for no cooldowns!", delete_after=3)
-                        return
-                
-                self.cooldowns[user_key] = current_time
+        # Track command usage
+        try:
+            await self.db.increment_user_commands(ctx.author.id)
+        except:
+            pass
         
         await self.invoke(ctx)
 

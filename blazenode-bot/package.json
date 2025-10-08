@@ -26,6 +26,8 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^1.11.0",
+    "canvacard": "^5.4.9",
+    "canvas": "^2.11.2",
     "discord.js": "^14.22.1",
     "dotenv": "^16.6.1",
     "mongoose": "^7.8.7"

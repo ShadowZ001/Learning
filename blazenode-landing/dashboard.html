@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_dmlhYmxlLWNvdy0zNy5jbGVyay5hY2NvdW50cy5kZXYk" src="https://viable-cow-37.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
     <!-- Linkvertise Script -->
     <script src="https://publisher.linkvertise.com/cdn/linkvertise.js"></script>
     <script>linkvertise(1393912, {whitelist: [], blacklist: [""]});</script>
@@ -73,17 +74,22 @@
                 <!-- Header -->
                 <header class="dashboard-header">
                     <div class="welcome-section">
-                        <h1>Welcome back, <span id="username">Loading...</span> 👋</h1>
+                        <h1>Welcome back, <span id="username">User</span> 👋</h1>
                         <p>Manage your servers, account and other features from your dashboard.</p>
                     </div>
                     <div class="user-profile">
                         <button class="home-btn" onclick="dashboard.showPage('home')" title="Go to Home">
                             <i class="fas fa-home"></i>
                         </button>
-                        <div class="profile-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <button class="logout-btn" onclick="logout()">Logout</button>
+                        <button class="profile-btn" onclick="dashboard.showPage('profile')" title="View Profile">
+                            <div class="profile-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </button>
+                        <button class="logout-btn" onclick="logout()" title="Sign out of your account">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </button>
                     </div>
                 </header>
 
@@ -165,7 +171,9 @@
                 <section class="servers-section">
                     <h2>My servers</h2>
                     <div class="servers-list" id="serversList">
-                        <div class="loading">Loading servers...</div>
+                        <div class="no-servers">
+                            <p>No servers found. Create your first server to get started!</p>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -183,7 +191,9 @@
                 <!-- Mobile View -->
                 <div class="servers-mobile-view">
                     <div class="servers-grid" id="serversGrid">
-                        <div class="loading">Loading servers...</div>
+                        <div class="no-servers">
+                            <p>No servers found. Create your first server to get started!</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -203,7 +213,7 @@
                             </thead>
                             <tbody id="serversTableBody">
                                 <tr>
-                                    <td colspan="6" class="loading-row">Loading servers...</td>
+                                    <td colspan="6" class="loading-row">No servers found</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -326,36 +336,44 @@
             <div id="create-server-step1" class="page">
                 <div class="create-server-container">
                     <div class="create-server-header">
-                        <h2>Create Server - Basics</h2>
+                        <h2>Create Server - Step 1: Basics</h2>
                         <div class="step-indicator">
                             <span class="step active">1</span>
                             <span class="step">2</span>
+                            <span class="step">3</span>
                         </div>
                     </div>
                     <div class="create-server-form">
                         <div class="form-group">
                             <label for="serverName">Server Name</label>
-                            <input type="text" id="serverName" placeholder="Enter server name" required>
+                            <input type="text" id="serverName" placeholder="My Awesome Server" required>
                             <small>Choose a unique name for your server</small>
                         </div>
                         <div class="form-group">
-                            <label for="serverNest">Server Nest</label>
+                            <label for="serverNest">Server Category (Nest)</label>
                             <select id="serverNest" required>
-                                <option value="">Select nest</option>
+                                <option value="">Loading nests...</option>
                             </select>
                             <small>Choose the server category</small>
                         </div>
                         <div class="form-group">
-                            <label for="serverEgg">Server Type</label>
-                            <select id="serverEgg" required>
+                            <label for="serverEgg">Server Type (Egg)</label>
+                            <select id="serverEgg" required disabled>
                                 <option value="">Select nest first...</option>
                             </select>
                             <small>Choose the server software type</small>
                         </div>
+                        <div class="form-group">
+                            <label for="serverNode">Server Node</label>
+                            <select id="serverNode" required>
+                                <option value="">Loading nodes...</option>
+                            </select>
+                            <small>Choose which node to deploy on</small>
+                        </div>
                     </div>
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" id="backToServersBtn">← Back to Servers</button>
-                        <button type="button" class="btn-primary" id="nextStepBtn">Next Step →</button>
+                        <button type="button" class="btn-secondary" onclick="dashboard.showPage('servers')">← Back to Servers</button>
+                        <button type="button" class="btn-primary" id="step1NextBtn">Next Step →</button>
                     </div>
                 </div>
             </div>
@@ -364,37 +382,88 @@
             <div id="create-server-step2" class="page">
                 <div class="create-server-container">
                     <div class="create-server-header">
-                        <h2>Create Server - Resources</h2>
+                        <h2>Create Server - Step 2: Resources</h2>
                         <div class="step-indicator">
                             <span class="step completed">1</span>
                             <span class="step active">2</span>
+                            <span class="step">3</span>
                         </div>
                     </div>
                     <div class="create-server-form">
                         <div class="resource-info">
                             <h3>Resource Allocation</h3>
                             <p>Configure your server resources within your account limits.</p>
+                            <div class="available-resources" id="availableResources">
+                                <span>Available: <strong id="availableRam">2048MB RAM</strong> | <strong id="availableCpu">100% CPU</strong> | <strong id="availableDisk">8GB Disk</strong></span>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="serverRam">Memory (RAM)</label>
+                            <label for="serverRam">Memory (RAM) - MB</label>
                             <input type="number" id="serverRam" min="512" max="2048" value="1024" required>
-                            <small>Memory in MB (512MB - 2048MB available)</small>
+                            <small>Memory in MB (512MB minimum)</small>
                         </div>
                         <div class="form-group">
-                            <label for="serverCpu">CPU Limit</label>
+                            <label for="serverCpu">CPU Limit - %</label>
                             <input type="number" id="serverCpu" min="25" max="100" value="50" required>
-                            <small>CPU percentage (25% - 100% available)</small>
+                            <small>CPU percentage (25% minimum)</small>
                         </div>
                         <div class="form-group">
-                            <label for="serverDisk">Disk Space</label>
-                            <input type="number" id="serverDisk" min="1024" max="5120" value="2048" required>
-                            <small>Disk space in MB (1024MB - 5120MB available)</small>
+                            <label for="serverDisk">Disk Space - MB</label>
+                            <input type="number" id="serverDisk" min="1024" max="8192" value="2048" required>
+                            <small>Disk space in MB (1GB minimum)</small>
                         </div>
-                        <div id="validation-message" class="validation-message"></div>
+                        <div id="resourceValidation" class="validation-message"></div>
                     </div>
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" id="prevStepBtn">← Previous Step</button>
-                        <button type="button" class="btn-primary" id="createServerFinalBtn">Create Server</button>
+                        <button type="button" class="btn-secondary" id="step2BackBtn">← Previous Step</button>
+                        <button type="button" class="btn-primary" id="step2NextBtn">Next Step →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Server Step 3 -->
+            <div id="create-server-step3" class="page">
+                <div class="create-server-container">
+                    <div class="create-server-header">
+                        <h2>Create Server - Step 3: Confirm</h2>
+                        <div class="step-indicator">
+                            <span class="step completed">1</span>
+                            <span class="step completed">2</span>
+                            <span class="step active">3</span>
+                        </div>
+                    </div>
+                    <div class="create-server-form">
+                        <div class="server-summary">
+                            <h3>Server Summary</h3>
+                            <div class="summary-item">
+                                <label>Server Name:</label>
+                                <span id="summaryName">-</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Server Type:</label>
+                                <span id="summaryType">-</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Resources:</label>
+                                <span id="summaryResources">-</span>
+                            </div>
+                            <div class="summary-item">
+                                <label>Account:</label>
+                                <span id="summaryAccount">-</span>
+                            </div>
+                        </div>
+                        <div class="creation-status" id="creationStatus" style="display: none;">
+                            <div class="status-message" id="statusMessage">Creating server...</div>
+                            <div class="status-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="creationProgress"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="step3BackBtn">← Previous Step</button>
+                        <button type="button" class="btn-primary" id="createServerBtn" onclick="createServerNow()">🚀 Create Server</button>
                     </div>
                 </div>
             </div>
@@ -677,7 +746,9 @@
                         </div>
                         
                         <div class="promotions-grid" id="promotionsGrid">
-                            <div class="loading">Loading promotions...</div>
+                            <div class="no-promotions">
+                                <p>No server promotions yet. Be the first to promote your server!</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -772,7 +843,9 @@
                     <div class="leaderboard-card">
                         <h3>Top 10 Users by BlazeCoins</h3>
                         <div class="leaderboard-list" id="leaderboardList">
-                            <div class="loading">Loading leaderboard...</div>
+                            <div class="no-data">
+                                <p>Leaderboard will appear here once users start earning coins!</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -797,7 +870,9 @@
                         <div class="admin-card">
                             <h3>👥 Users Management</h3>
                             <div class="users-grid" id="usersGrid">
-                                <div class="loading">Loading users...</div>
+                                <div class="no-data">
+                                    <p>User management will appear here.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -984,6 +1059,9 @@
                             <div class="profile-info">
                                 <h2 id="profile-username">Loading...</h2>
                                 <p id="profile-email">Loading...</p>
+                                <button class="btn-secondary" onclick="editProfile()" style="margin-top: 10px; padding: 8px 16px; font-size: 12px;">
+                                    <i class="fas fa-edit"></i> Edit Profile
+                                </button>
                             </div>
                         </div>
                         
@@ -1028,6 +1106,7 @@
                                 <div class="detail-value">
                                     <span id="pterodactyl-email">Loading...</span>
                                     <button class="copy-btn" onclick="copyPterodactylEmail()">📋</button>
+                                    <button class="toggle-btn" onclick="editPterodactylEmail()">✏️</button>
                                 </div>
                             </div>
                             <div class="detail-item">
@@ -1036,11 +1115,25 @@
                                     <span id="pterodactyl-password" class="password-hidden">••••••••</span>
                                     <button class="toggle-btn" onclick="togglePassword()">👁️</button>
                                     <button class="copy-btn" onclick="copyPterodactylPassword()">📋</button>
+                                    <button class="toggle-btn" onclick="editPterodactylPassword()">✏️</button>
                                 </div>
                             </div>
                         </div>
                         <div class="pterodactyl-note">
-                            <p><strong>Note:</strong> Use these credentials to access your Pterodactyl panel and manage your servers directly.</p>
+                            <div class="pterodactyl-auto-info" style="background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 12px; padding: 20px;">
+                                <p><strong>🎉 Pterodactyl Account Auto-Created!</strong></p>
+                                <p>Your Pterodactyl panel account was automatically created when you signed up with your Gmail. Use the credentials above to access the panel and manage your servers.</p>
+                                <div class="pterodactyl-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+                                    <a href="https://panel.blazenode.site" target="_blank" class="btn-primary">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        Open Pterodactyl Panel
+                                    </a>
+                                    <button class="btn-secondary" onclick="copyAllCredentials()">
+                                        <i class="fas fa-copy"></i>
+                                        Copy All Credentials
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1064,6 +1157,27 @@
         </main>
     </div>
 
+    <script>
+        // Initialize Clerk before dashboard
+        window.addEventListener('load', async () => {
+            try {
+                if (window.Clerk) {
+                    await window.Clerk.load();
+                    
+                    if (!window.Clerk.user) {
+                        console.log('No Clerk user found, redirecting to login');
+                        window.location.href = '/';
+                        return;
+                    }
+                    
+                    console.log('Clerk user authenticated:', window.Clerk.user.id);
+                }
+            } catch (error) {
+                console.error('Clerk initialization error:', error);
+                window.location.href = '/';
+            }
+        });
+    </script>
     <script src="dashboard.js"></script>
 </body>
 </html>

@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
         unique: true,
         sparse: true
     },
+    clerkId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     discordUsername: {
         type: String
     },
@@ -33,7 +38,7 @@ const userSchema = new mongoose.Schema({
     },
     loginType: {
         type: String,
-        enum: ['username', 'discord', 'local'],
+        enum: ['username', 'discord', 'local', 'clerk'],
         required: true
     },
     coins: {
@@ -42,6 +47,12 @@ const userSchema = new mongoose.Schema({
     },
     pterodactylUserId: {
         type: Number
+    },
+    pterodactylPassword: {
+        type: String
+    },
+    pterodactylEmail: {
+        type: String
     },
     serverCount: {
         type: Number,

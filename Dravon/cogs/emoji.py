@@ -1,53 +1,101 @@
 import discord
 from discord.ext import commands
 
-class EmojiCommands(commands.Cog):
+class EmojiView(discord.ui.View):
+    def __init__(self, bot, guild, emojis, page=0):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.guild = guild
+        self.emojis = emojis
+        self.page = page
+        self.per_page = 10
+        self.max_pages = (len(emojis) - 1) // self.per_page + 1
+    
+    def create_embed(self):
+        start = self.page * self.per_page
+        end = start + self.per_page
+        page_emojis = self.emojis[start:end]
+        
+        embed = discord.Embed(
+            title=f"😀 {self.guild.name} Emojis",
+            description=f"**Total Emojis:** {len(self.emojis)}\n**Page:** {self.page + 1}/{self.max_pages}",
+            color=0x7289da
+        )
+        
+        if page_emojis:
+            emoji_text = ""
+            for emoji in page_emojis:
+                emoji_text += f"{emoji} `:{emoji.name}:` - {emoji.id}\n"
+            
+            embed.add_field(
+                name="Emojis",
+                value=emoji_text,
+                inline=False
+            )
+        else:
+            embed.add_field(
+                name="No Emojis",
+                value="This server has no custom emojis.",
+                inline=False
+            )
+        
+        embed.set_footer(text=f"Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
+        return embed
+    
+    @discord.ui.button(emoji="⏪", style=discord.ButtonStyle.secondary)
+    async def first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = 0
+        embed = self.create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.secondary)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page > 0:
+            self.page -= 1
+        embed = self.create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.button(emoji="🏠", style=discord.ButtonStyle.primary)
+    async def home_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = 0
+        embed = self.create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.secondary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page < self.max_pages - 1:
+            self.page += 1
+        embed = self.create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.button(emoji="⏩", style=discord.ButtonStyle.secondary)
+    async def last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = self.max_pages - 1
+        embed = self.create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+class Emoji(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.command(name='emoji', aliases=['emojis'])
-    async def emoji_list(self, ctx):
-        """Show available emoji placeholders"""
-        embed = discord.Embed(
-            title="🎭 Available Emoji Placeholders",
-            description="Use these placeholders in your messages and they'll be converted to emojis!",
-            color=0x58a6ff
-        )
+    @commands.hybrid_command(name="emoji")
+    async def emoji_command(self, ctx):
+        """Show all server emojis with navigation"""
+        emojis = ctx.guild.emojis
         
-        # Basic emojis
-        basic = ":smile: :grin: :joy: :heart: :fire: :star: :thumbsup: :thumbsdown: :clap: :wave:"
-        embed.add_field(name="😊 Basic Emojis", value=basic, inline=False)
-        
-        # Utility emojis
-        utility = ":check: :x: :warning: :info: :question: :exclamation:"
-        embed.add_field(name="⚠️ Utility", value=utility, inline=False)
-        
-        # Numbers
-        numbers = ":one: :two: :three: :four: :five: :six: :seven: :eight: :nine: :ten:"
-        embed.add_field(name="🔢 Numbers", value=numbers, inline=False)
-        
-        # Music
-        music = ":musical_note: :notes: :microphone: :headphones: :speaker: :mute:"
-        embed.add_field(name="🎵 Music", value=music, inline=False)
-        
-        # Status
-        status = ":online: :idle: :dnd: :offline: :streaming:"
-        embed.add_field(name="🟢 Status", value=status, inline=False)
-        
-        embed.set_footer(text="Example: Type ':fire: This is lit!' and it becomes '🔥 This is lit!'")
-        
-        await ctx.send(embed=embed)
-    
-    @commands.command(name='addemoji', hidden=True)
-    @commands.has_permissions(administrator=True)
-    async def add_emoji(self, ctx, placeholder: str, emoji: str):
-        """Add custom emoji placeholder (Admin only)"""
-        if not placeholder.startswith(':') or not placeholder.endswith(':'):
-            await ctx.send("❌ Placeholder must be in format `:name:`")
+        if not emojis:
+            embed = discord.Embed(
+                title="😀 Server Emojis",
+                description="This server has no custom emojis.",
+                color=0x7289da
+            )
+            embed.set_footer(text="Powered by Dravon™", icon_url=self.bot.user.display_avatar.url)
+            await ctx.send(embed=embed)
             return
         
-        self.bot.emoji_handler.add_emoji(placeholder, emoji)
-        await ctx.send(f"✅ Added emoji placeholder: {placeholder} → {emoji}")
+        view = EmojiView(self.bot, ctx.guild, emojis)
+        embed = view.create_embed()
+        await ctx.send(embed=embed, view=view)
 
 async def setup(bot):
-    await bot.add_cog(EmojiCommands(bot))
+    await bot.add_cog(Emoji(bot))

@@ -17,7 +17,7 @@ const userResourcesSchema = new mongoose.Schema({
     },
     availableDisk: {
         type: Number,
-        default: 5120 // 5GB default
+        default: 8192 // 8GB default
     },
     serverSlots: {
         type: Number,

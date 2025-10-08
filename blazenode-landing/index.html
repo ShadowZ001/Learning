@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_dmlhYmxlLWNvdy0zNy5jbGVyay5hY2NvdW50cy5kZXYk" src="https://viable-cow-37.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
 <body>
     <!-- Animated Background -->
@@ -97,28 +98,8 @@
                         <p class="login-subtitle">Sign in to access your game servers and manage your resources</p>
                     </div>
                     
-                    <!-- Username/Password Login Form -->
-                    <form id="loginForm" class="login-form" style="margin-bottom: 1rem;">
-                        <div class="form-group">
-                            <input type="text" id="username" name="username" placeholder="Username" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="password" id="password" name="password" placeholder="Password" required>
-                        </div>
-                        <button type="submit" class="login-btn">
-                            <i class="fas fa-sign-in-alt"></i>
-                            Sign In
-                        </button>
-                    </form>
-                    
-                    <div class="divider">
-                        <span>OR</span>
-                    </div>
-                    
-                    <a href="/auth/discord" class="discord-login-btn">
-                        <i class="fab fa-discord"></i>
-                        Continue with Discord
-                    </a>
+                    <!-- Clerk Authentication -->
+                    <div id="clerk-sign-in"></div>
                     
                     <div id="message" class="message-container"></div>
                     
@@ -174,160 +155,39 @@
 
     <script src="script.js"></script>
     <script>
-        // Check for URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get('error');
-        const message = urlParams.get('message');
-        
-        if (error) {
-            showMessage(decodeURIComponent(message || 'Authentication failed'), 'error');
-        }
-        
-        // Handle form submission
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                showMessage('Please enter both username and password', 'error');
-                return;
-            }
-            
+        window.addEventListener('load', async () => {
             try {
-                const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, password }),
-                    credentials: 'include'
-                });
+                await Clerk.load();
                 
-                const data = await response.json();
+                if (Clerk.user) {
+                    console.log('User already signed in, redirecting to dashboard');
+                    window.location.href = '/dashboard';
+                    return;
+                }
                 
-                if (data.success) {
-                    showMessage('Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = data.redirect || '/dashboard';
-                    }, 1000);
-                } else {
-                    showMessage(data.error || 'Login failed', 'error');
+                const signInDiv = document.getElementById('clerk-sign-in');
+                if (signInDiv) {
+                    Clerk.mountSignIn(signInDiv, {
+                        afterSignInUrl: '/dashboard',
+                        appearance: {
+                            elements: {
+                                card: 'bg-transparent border-0 shadow-none',
+                                headerTitle: 'text-white text-2xl font-bold',
+                                headerSubtitle: 'text-gray-400',
+                                formButtonPrimary: 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700'
+                            }
+                        }
+                    });
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                showMessage('Login failed. Please try again.', 'error');
+                console.error('Clerk initialization error:', error);
             }
         });
-        
-        function showMessage(text, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
-            
-            // Clear message after 5 seconds
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 5000);
-        }
     </script>
     
     <style>
-        .login-form {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group input {
+        #clerk-sign-in {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .form-group input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .form-group input:focus {
-            outline: none;
-            border-color: #00d4ff;
-            background: rgba(255, 255, 255, 0.15);
-        }
-        
-        .login-btn {
-            width: 100%;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
-        }
-        
-        .divider {
-            text-align: center;
-            margin: 1.5rem 0;
-            position: relative;
-        }
-        
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .divider span {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            padding: 0 1rem;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
-        }
-        
-        .message-container {
-            margin: 1rem 0;
-        }
-        
-        .message {
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        
-        .message.error {
-            background: rgba(255, 59, 48, 0.1);
-            color: #ff3b30;
-            border: 1px solid rgba(255, 59, 48, 0.3);
-        }
-        
-        .message.success {
-            background: rgba(52, 199, 89, 0.1);
-            color: #34c759;
-            border: 1px solid rgba(52, 199, 89, 0.3);
         }
     </style>
 </body>

@@ -213,30 +213,58 @@ class Music(commands.Cog):
     
     async def cog_load(self):
         """Initialize Lavalink connection with intelligent node management"""
-        # Start with primary node only
-        await self.connect_primary_node()
+        # Try to connect to any available node
+        await self.connect_any_available_node()
         
-        # Start node monitoring task (reduced frequency)
+        # Start node monitoring task
         self.bot.loop.create_task(self.monitor_nodes())
     
-    async def connect_primary_node(self):
-        """Connect to primary node only"""
-        primary_node = wavelink.Node(
-            uri=f"http://{os.getenv('LAVALINK_HOST', 'localhost')}:{os.getenv('LAVALINK_PORT', '2333')}",
-            password=os.getenv('LAVALINK_PASSWORD', 'youshallnotpass'),
-            identifier="primary"
-        )
+    async def connect_any_available_node(self):
+        """Try to connect to any available node in priority order"""
+        # Define all nodes in priority order
+        all_nodes = [
+            {
+                "node": wavelink.Node(
+                    uri=f"http://{os.getenv('LAVALINK_HOST', 'localhost')}:{os.getenv('LAVALINK_PORT', '2333')}",
+                    password=os.getenv('LAVALINK_PASSWORD', 'youshallnotpass'),
+                    identifier="primary"
+                ),
+                "name": "primary"
+            },
+            {
+                "node": wavelink.Node(
+                    uri=f"https://{os.getenv('LAVALINK_HOST2', 'lavalink.oops.wtf')}:{os.getenv('LAVALINK_PORT2', '443')}",
+                    password=os.getenv('LAVALINK_PASSWORD2', 'www.freelavalink.ga'),
+                    identifier="backup1"
+                ),
+                "name": "backup1"
+            },
+            {
+                "node": wavelink.Node(
+                    uri=f"https://{os.getenv('LAVALINK_HOST3', 'lava-v3.ajieblogs.eu.org')}:{os.getenv('LAVALINK_PORT3', '443')}",
+                    password=os.getenv('LAVALINK_PASSWORD3', 'https://dsc.gg/ajidevserver'),
+                    identifier="backup2"
+                ),
+                "name": "backup2"
+            }
+        ]
         
-        try:
-            await wavelink.Pool.connect(client=self.bot, nodes=[primary_node])
-            self.active_nodes = ["primary"]
-            print("✅ Connected to primary Lavalink node")
-        except Exception as e:
-            print(f"❌ Primary node failed: {e}")
-            print("⚠️ Music features will be limited without Lavalink")
+        # Try each node until one connects
+        for node_info in all_nodes:
+            try:
+                await wavelink.Pool.connect(client=self.bot, nodes=[node_info["node"]])
+                self.active_nodes = [node_info["name"]]
+                print(f"✅ Connected to {node_info['name']} Lavalink node")
+                return True
+            except Exception as e:
+                print(f"❌ {node_info['name']} node failed: {e}")
+                continue
+        
+        print("❌ All Lavalink nodes failed - music features disabled")
+        return False
     
     async def connect_backup_node(self):
-        """Connect to backup node only when primary fails"""
+        """Connect to backup node when primary fails"""
         backup_nodes = [
             wavelink.Node(
                 uri=f"https://{os.getenv('LAVALINK_HOST2', 'lavalink.oops.wtf')}:{os.getenv('LAVALINK_PORT2', '443')}",
@@ -255,53 +283,42 @@ class Music(commands.Cog):
                 await wavelink.Pool.connect(client=self.bot, nodes=[node])
                 self.active_nodes = [node.identifier]
                 print(f"✅ Connected to backup node: {node.identifier}")
-                return
+                return True
             except Exception as e:
                 print(f"❌ Failed to connect to {node.identifier}: {e}")
         
         print("❌ No Lavalink nodes available - music features disabled")
+        return False
     
     async def monitor_nodes(self):
-        """Monitor node health - only use backups if primary fails"""
+        """Monitor node health and reconnect if needed"""
         while not self.bot.is_closed():
-            await asyncio.sleep(60)  # Check every 60 seconds to reduce latency
+            await asyncio.sleep(30)  # Check every 30 seconds
             
             try:
-                # Only check if we need to switch back to primary from backup
                 current_node = wavelink.Pool.get_node()
                 
-                # If we're on backup and primary is available, switch back
-                if current_node and current_node.identifier != "primary" and "primary" not in self.active_nodes:
-                    try:
-                        # Test primary connectivity
-                        primary_node = wavelink.Node(
-                            uri=f"http://{os.getenv('LAVALINK_HOST')}:{os.getenv('LAVALINK_PORT')}",
-                            password=os.getenv('LAVALINK_PASSWORD'),
-                            identifier="primary"
-                        )
-                        await wavelink.Pool.connect(client=self.bot, nodes=[primary_node])
-                        
-                        # If successful, disconnect backup
+                # Check if current node is disconnected
+                if not current_node or (hasattr(current_node, 'is_connected') and not current_node.is_connected()):
+                    print("🔄 Node disconnected, reconnecting...")
+                    
+                    # Disconnect current node if exists
+                    if current_node:
                         try:
                             await current_node.disconnect()
-                            if current_node.identifier in self.active_nodes:
-                                self.active_nodes.remove(current_node.identifier)
                         except:
                             pass
-                        
-                        self.active_nodes = ["primary"]
-                        print("🔄 Switched back to primary node")
-                    except:
-                        # Primary still not available, stay on backup
-                        pass
-                
-                # Only check node health if there are issues
-                elif not current_node or (hasattr(current_node, 'is_connected') and not current_node.is_connected()):
-                    print("🔄 Node disconnected, connecting to backup...")
-                    await self.connect_backup_node()
+                    
+                    # Try to reconnect to any available node
+                    await self.connect_any_available_node()
                     
             except Exception as e:
                 print(f"❌ Node monitoring error: {e}")
+                # Try to reconnect on error
+                try:
+                    await self.connect_any_available_node()
+                except:
+                    pass
     
     def get_player(self, guild_id):
         """Get player with proper error handling"""
@@ -367,18 +384,18 @@ class Music(commands.Cog):
             title="🎶 Music Player",
             color=0x808080
         )
-        embed.set_author(name="Dravon", icon_url=self.bot.user.display_avatar.url)
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         
         if player.current:
             embed.add_field(
                 name="🎵 Now Playing",
-                value=f"**{player.current.title}**\nBy: {player.current.author}",
+                value=f"**{player.current.title}**",
                 inline=False
             )
         else:
             embed.add_field(
                 name="🎵 Now Playing",
-                value="**Nothing playing right now**",
+                value="**Nothing playing**",
                 inline=False
             )
         
@@ -388,33 +405,16 @@ class Music(commands.Cog):
         else:
             status = "⏹️ Stopped"
         
-        embed.add_field(name="🎛️ Status", value=status, inline=True)
+        embed.add_field(name="Status", value=status, inline=True)
+        embed.add_field(name="Volume", value=f"{player.volume}%", inline=True)
         
         # Queue
         if player.queue:
-            queue_list = []
-            for i, track in enumerate(list(player.queue)[:5], 1):
-                queue_list.append(f"{i}. {track.title}")
-            queue_text = "\n".join(queue_list)
-            if len(player.queue) > 5:
-                queue_text += f"\n... and {len(player.queue) - 5} more"
+            queue_count = len(player.queue)
+            embed.add_field(name="Queue", value=f"{queue_count} tracks", inline=True)
         else:
-            queue_text = "Empty"
+            embed.add_field(name="Queue", value="Empty", inline=True)
         
-        embed.add_field(name="📜 Queue", value=queue_text, inline=True)
-        
-        # Volume
-        embed.add_field(name="🔊 Volume", value=f"{player.volume}%", inline=True)
-        
-        embed.add_field(
-            name="✨ Enjoy Free Music Experience",
-            value="🎧 Use the buttons below to control playback!",
-            inline=False
-        )
-        
-        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-        embed.set_image(url="https://cdn.discordapp.com/attachments/1369352923896741924/1413172497964339200/e8ce1391-d56f-493b-827c-e4193504d635.jpg?ex=68baf6f2&is=68b9a572&hm=84ef8272435663ce53d9817be2781ed63bdde5bbb09735f08b0f8eff2aee027d&")
-        embed = add_dravon_footer(embed)
         return embed
     
     async def update_music_embed(self, guild_id):
@@ -513,33 +513,52 @@ class Music(commands.Cog):
                 await ctx.send(f"❌ Connection failed: {str(e)}", delete_after=5)
                 return
         
-        # Search for tracks based on premium mode
-        try:
-            if premium_cog and await premium_cog.is_premium(ctx.author.id):
-                music_mode = await premium_cog.get_music_mode(ctx.author.id)
-                if music_mode == "spotify" and ("spotify" in query.lower() or "open.spotify.com" in query):
-                    # Premium Spotify mode
-                    tracks = await wavelink.Playable.search(query, source=wavelink.TrackSource.Spotify)
+        # Search for tracks with node fallback
+        tracks = None
+        search_attempts = 0
+        max_attempts = 3
+        
+        while not tracks and search_attempts < max_attempts:
+            try:
+                if premium_cog and await premium_cog.is_premium(ctx.author.id):
+                    music_mode = await premium_cog.get_music_mode(ctx.author.id)
+                    if music_mode == "spotify" and ("spotify" in query.lower() or "open.spotify.com" in query):
+                        # Premium Spotify mode
+                        tracks = await wavelink.Playable.search(query, source=wavelink.TrackSource.Spotify)
+                    else:
+                        # Premium Lavalink mode or regular search
+                        tracks = await wavelink.Playable.search(query)
                 else:
-                    # Premium Lavalink mode or regular search
+                    # Non-premium users only get basic Lavalink
                     tracks = await wavelink.Playable.search(query)
-            else:
-                # Non-premium users only get basic Lavalink
-                tracks = await wavelink.Playable.search(query)
-            
-            if not tracks:
-                embed = discord.Embed(
-                    title="❌ No Results",
-                    description=f"No tracks found for: `{query}`",
-                    color=0xff0000
-                )
-                embed = add_dravon_footer(embed)
-                await ctx.send(embed=embed)
-                return
-        except Exception as e:
+                
+                if tracks:
+                    break
+                    
+            except Exception as e:
+                print(f"Search attempt {search_attempts + 1} failed: {e}")
+                search_attempts += 1
+                
+                # Try to connect to next available node if search fails
+                if search_attempts < max_attempts:
+                    print("Attempting to switch to next available node...")
+                    current_node = wavelink.Pool.get_node()
+                    if current_node:
+                        try:
+                            await current_node.disconnect()
+                        except:
+                            pass
+                    
+                    success = await self.connect_any_available_node()
+                    if not success:
+                        break
+                    
+                    await asyncio.sleep(2)  # Brief delay before retry
+        
+        if not tracks:
             embed = discord.Embed(
-                title="❌ Search Error",
-                description="Failed to search for tracks. Trying backup nodes...",
+                title="❌ No Results",
+                description=f"No tracks found for: `{query}`\nAll nodes may be unavailable.",
                 color=0xff0000
             )
             embed = add_dravon_footer(embed)
@@ -736,10 +755,11 @@ class Music(commands.Cog):
             queue_list.append(f"{i}. **{track.title}** - {track.author}")
         
         embed = discord.Embed(
-            title="📜 Current Queue",
+            title="📜 Queue",
             description="\n".join(queue_list),
-            color=0x7289da
+            color=0x808080
         )
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         
         if len(player.queue) > 10:
             embed.add_field(
@@ -758,9 +778,9 @@ class Music(commands.Cog):
             embed = discord.Embed(
                 title="❌ Invalid Volume",
                 description="Volume must be between 1 and 100!",
-                color=0xff0000
+                color=0x808080
             )
-            embed = add_dravon_footer(embed)
+            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
             await ctx.send(embed=embed)
             return
         
@@ -781,9 +801,9 @@ class Music(commands.Cog):
         embed = discord.Embed(
             title="🔊 Volume Changed",
             description=f"Volume set to {volume}%",
-            color=0x00ff00
+            color=0x808080
         )
-        embed = add_dravon_footer(embed)
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
         await ctx.send(embed=embed)
     
     @commands.Cog.listener()

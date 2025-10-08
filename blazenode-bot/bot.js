@@ -1,9 +1,12 @@
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, PermissionsBitField, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+
+// AI Configuration
+const AIConfig = require('./models/AIConfig');
 
 // Dashboard API connection
 const dashboardAPI = axios.create({
@@ -29,7 +32,7 @@ dashboardAPI.get('/api/debug/dbtest')
 // HARDCODED ADMIN ID - ONLY THIS USER CAN USE ADMIN COMMANDS
 const ADMIN_ID = '1037768611126841405';
 let botAdmins = [ADMIN_ID];
-const PREFIX = '!'; // Changed from / to ! to avoid Discord slash command conflicts
+const PREFIX = '>'; // Main bot prefix
 
 console.log('🚀 Starting BlazeNode Discord Bot...');
 console.log('👑 Admin User ID:', ADMIN_ID);
@@ -102,7 +105,10 @@ function loadCommands() {
                     
                     if ('name' in command && 'execute' in command) {
                         bot.commands.set(command.name, command);
-                        console.log(`📝 Loaded command: ${command.name} (${folder})`);
+                        console.log(`📝 Loaded command: ${command.name} (${folder}) - Admin: ${command.adminOnly}`);
+                        if (command.aliases) {
+                            console.log(`   🔗 Aliases: ${command.aliases.join(', ')}`);
+                        }
                     } else {
                         console.log(`⚠️ Command ${file} is missing required properties.`);
                     }
@@ -122,14 +128,51 @@ loadCommands();
 
 bot.once('ready', async () => {
     try {
-        const User = require('./models/User');
-        const userCount = await User.countDocuments();
+        let userCount = 0;
+        try {
+            const User = require('./models/User');
+            userCount = await User.countDocuments();
+        } catch (error) {
+            console.log('⚠️ User model not available:', error.message);
+        }
         
         console.log('✅ Bot Online:', bot.user.tag);
         console.log('🔧 Guilds:', bot.guilds.cache.size);
         console.log('👥 Users in DB:', userCount);
         console.log('📝 Commands loaded:', bot.commands.size);
         console.log(`🎯 Ready! Use ${PREFIX}help to see commands`);
+        
+        // Register slash commands
+        const commands = [
+            new SlashCommandBuilder()
+                .setName('ai')
+                .setDescription('AI setup and configuration')
+                .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+            new SlashCommandBuilder()
+                .setName('levelup')
+                .setDescription('Level system configuration')
+                .addStringOption(option =>
+                    option.setName('mode')
+                        .setDescription('Setup mode')
+                        .addChoices(
+                            { name: 'Normal Setup', value: 'normal' },
+                            { name: 'Canvacard Setup', value: 'canva' }
+                        ))
+                .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator)
+        ];
+        
+        const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
+        
+        try {
+            console.log('🔄 Registering slash commands...');
+            await rest.put(
+                Routes.applicationCommands(bot.user.id),
+                { body: commands }
+            );
+            console.log('✅ Slash commands registered successfully');
+        } catch (error) {
+            console.error('❌ Failed to register slash commands:', error);
+        }
         
         // Set bot status
         bot.user.setActivity(`${PREFIX}help | BlazeNode Dashboard`, { type: 'WATCHING' });
@@ -150,22 +193,17 @@ bot.on('messageCreate', async (message) => {
         // Skip bots
         if (message.author.bot) return;
         
-        const isAdmin = message.author.id === ADMIN_ID || botAdmins.includes(message.author.id);
+        console.log(`📨 Message received: "${message.content}" from ${message.author.username}`);
+        console.log(`🔍 Starts with prefix (${PREFIX}): ${message.content.startsWith(PREFIX)}`);
+        console.log(`👑 User permissions: ${message.member?.permissions.has(PermissionsBitField.Flags.Administrator) ? 'Admin' : 'Not Admin'}`);
+        console.log(`🏠 Guild: ${message.guild?.name || 'DM'}`);
+        console.log('---');
+        
+        const isAdmin = message.author.id === ADMIN_ID || botAdmins.includes(message.author.id) || message.member?.permissions.has(PermissionsBitField.Flags.Administrator);
         
         // Check if user is premium
         let isPremium = false;
-        try {
-            const User = require('./models/User');
-            const user = await User.findOne({ 
-                $or: [
-                    { username: message.author.username },
-                    { discordId: message.author.id }
-                ]
-            });
-            isPremium = user?.isPremium && (!user.premiumExpiry || user.premiumExpiry > new Date());
-        } catch (error) {
-            console.log('⚠️ Premium check failed:', error.message);
-        }
+        // Skip premium check for now
         
         let commandName, args, hasPrefix = false;
         
@@ -174,22 +212,24 @@ bot.on('messageCreate', async (message) => {
             hasPrefix = true;
             args = message.content.slice(PREFIX.length).trim().split(/ +/);
             commandName = args.shift().toLowerCase();
+            console.log(`🔍 Prefix command detected: ${commandName}`);
         }
         // Check for premium no-prefix command (single letter A-Z, a-z)
         else if (isPremium && /^[A-Za-z]( |$)/.test(message.content)) {
             args = message.content.trim().split(/ +/);
             commandName = args.shift().toLowerCase();
         }
-        // Not a command
+        // Not a command - check for AI response
         else {
+            await handleAIResponse(message);
             return;
         }
 
         console.log(`📨 Command: ${hasPrefix ? PREFIX : ''}${commandName} | User: ${message.author.username} (${message.author.id}) | Admin: ${isAdmin} | Premium: ${isPremium}`);
         console.log(`📋 Args: [${args.join(', ')}]`);
 
-        // Get command
-        const command = bot.commands.get(commandName);
+        // Get command (check aliases too)
+        const command = bot.commands.get(commandName) || bot.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
         if (!command) {
             console.log(`❌ Command not found: ${commandName}`);
             return message.reply(`❌ **Unknown command:** \`${hasPrefix ? PREFIX : ''}${commandName}\`\\nUse \`${PREFIX}help\` to see all available commands.`);
@@ -224,6 +264,54 @@ bot.on('messageCreate', async (message) => {
             await message.reply(`❌ **Error:** ${error.message}\\n*Check console for details.*`);
         } catch (replyError) {
             console.error('❌ Could not send error message:', replyError);
+        }
+    }
+});
+
+
+
+// Slash command handler
+bot.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    
+    const isAdmin = interaction.member?.permissions.has(PermissionsBitField.Flags.Administrator);
+    
+    if (!isAdmin) {
+        return interaction.reply({ content: '❌ **Access Denied!** Only administrators can use this command.', ephemeral: true });
+    }
+    
+    // Create fake message object for compatibility
+    const fakeMessage = {
+        author: interaction.user,
+        guild: interaction.guild,
+        channel: interaction.channel,
+        member: interaction.member,
+        reply: async (options) => {
+            if (interaction.replied || interaction.deferred) {
+                return interaction.followUp(options);
+            } else {
+                return interaction.reply(options);
+            }
+        }
+    };
+    
+    try {
+        if (interaction.commandName === 'ai') {
+            const aiCommand = require('./commands/admin/ai.js');
+            await aiCommand.execute(fakeMessage, []);
+        } else if (interaction.commandName === 'levelup') {
+            const levelupCommand = require('./commands/admin/levelup.js');
+            const mode = interaction.options.getString('mode') || 'normal';
+            const args = mode === 'canva' ? ['canva'] : [];
+            await levelupCommand.execute(fakeMessage, args);
+        }
+    } catch (error) {
+        console.error('❌ Slash command error:', error);
+        const errorMsg = { content: '❌ An error occurred while executing the command.', ephemeral: true };
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(errorMsg);
+        } else {
+            await interaction.reply(errorMsg);
         }
     }
 });
@@ -299,6 +387,56 @@ async function giveDashboardCoins(username, coins) {
         console.error('❌ Failed to give coins:', error.message);
     }
     return null;
+}
+
+// AI Response Handler
+async function handleAIResponse(message) {
+    try {
+        if (!message.guild) return;
+        
+        const config = await AIConfig.findOne({ guildId: message.guild.id });
+        if (!config || !config.enabled || !config.channelId) return;
+        
+        if (message.channel.id !== config.channelId) return;
+        
+        // Skip if message starts with prefix (it's a command)
+        if (message.content.startsWith('>')) return;
+        
+        // Show typing indicator
+        await message.channel.sendTyping();
+        
+        const response = await axios.post('https://api.aichatos.cloud/api/generateContent', {
+            model: 'gemini-2.5-pro',
+            prompt: `You are a helpful AI assistant in a Discord server. Keep responses concise and friendly.\n\nUser: ${message.content}`,
+            max_tokens: 500
+        }, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const aiResponse = response.data.response || response.data.text || response.data.content;
+        
+        // Split long messages
+        if (aiResponse.length > 2000) {
+            const chunks = aiResponse.match(/[\s\S]{1,2000}/g);
+            for (const chunk of chunks) {
+                await message.reply(chunk);
+            }
+        } else {
+            await message.reply(aiResponse);
+        }
+        
+    } catch (error) {
+        console.error('❌ AI Response Error:', error.message);
+        if (error.response?.status === 401) {
+            await message.reply('❌ AI service authentication failed. Please check API key.');
+        } else if (error.response?.status === 429) {
+            await message.reply('❌ AI service rate limit reached. Please try again later.');
+        } else {
+            await message.reply('❌ AI service temporarily unavailable.');
+        }
+    }
 }
 
 // Export functions for use in commands
